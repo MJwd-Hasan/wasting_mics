@@ -1,0 +1,14 @@
+ub2
+female
+diarrhoea_2w
+cough_2w
+breathing_2w
+edu_level
+mage_cat
+parity_model
+water_cat
+toilet_cat
+fuel_cat
+urban
+wealth
+division
