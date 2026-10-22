@@ -1,90 +1,73 @@
-# Severe Wasting among Children Under 5: MICS Survey Analysis
+# Severe Wasting among Children Under Five: MICS Analysis
 
-Design-aware exploratory and inferential analysis of **severe wasting** (`severe_wasting`) in children under five, using a Multiple Indicator Cluster Survey (MICS) child dataset.
+This project explores child, maternal, and household factors associated with severe wasting among children under five in a MICS child dataset. It combines Python exploratory notebooks with an R follow-up using the `survey` package.
 
-## Repository contents
+> **Status: preliminary.** Output CSVs from the R follow-up are present on this branch, but the current local run is blocked because Windows Application Control prevents R from loading `readr.dll`. The outputs have not yet been independently reproduced on the current machine or compared with Stata. Treat all estimates as provisional, not publication-ready.
 
-| File | Description |
-|---|---|
-| `MICS-child-ISRC.dta` | Stata dataset: 22,311 children, 49 variables |
-| `eda.ipynb` | Main notebook: data preparation, univariate tests, multivariable models, and model-checking steps |
-| `analysis.ipynb` | Preliminary side analysis: survey-weighted GLM, random forest (cluster-grouped CV) and SHAP |
-| `Weighting code stata.png` | Reference Stata `svyset` command that the survey design follows |
+## Start here
 
-## Data and survey design
+- [Methodology in simple words](methodology.md) — what was done and why.
+- [Follow-up results, interpretation, and gaps](FOLLOWUP_ANALYSIS.md) — readable summary of current outputs.
+- [R follow-up script](analysis_followup.R)
+- [Main exploratory notebook](eda.ipynb)
+- [Secondary modelling notebook](analysis.ipynb)
 
-- **Outcome:** `severe_wasting` (binary). 552 of 22,311 children are severe wasting cases (unweighted).
-- **Survey design variables:**
-  - PSU / cluster: `hh1`
-  - Stratum: `strata` (area × division)
-  - Weight: `chweight` (child sample weight)
-- The design follows the Stata specification `svyset hh1 [pweight = chweight], strata(strata) singleunit(centered)`.
-- **Cleaning:** records with missing `hh1`, `chweight`, `strata` or `severe_wasting`, or with `chweight <= 0`, are dropped (final N = 22,311).
-- **Leakage control:** `whz2`, `mod_wasting`, `any_wasting` and `wast_cat` are removed because they are the same measurement as the outcome.
-- **Infant-only variables** (`dds`, `fvs`, `fg_*`, `bf_status`, `bottle`, `anc_cat`) exist mostly for children aged 0-1 (`young == 1`), so they are analysed in a separate infant subpopulation rather than in the full-sample model.
+## Research question and data
 
-## Methods (`eda.ipynb`)
+**Question:** Which child, maternal, and household characteristics are associated with severe wasting among children under five?
 
-1. **Descriptives:** unweighted counts and survey-weighted percentages for categorical variables; weighted mean, SD, median and IQR for continuous variables.
-2. **Design-based prevalence:** weighted prevalence of severe wasting per category, with Taylor-linearization 95% CIs (logit-transformed, df = PSUs − strata), implemented manually to mimic Stata.
-3. **Univariate tests:**
-   - Rao-Scott-type F-tests for binary and nominal predictors.
-   - Design-adjusted trend tests for ordered predictors (`wealth`, `edu_level`, `ub2`, `parity_cat`, `mage_cat`).
-   - Univariable weighted logistic regression for continuous and count variables (`wb4`, `cm11`), with quartile and spline linearity checks.
-   - The same tests repeated within infants (`young == 1`) for feeding and antenatal care variables.
-4. **Multivariable models:** survey-weighted logistic regression (weights plus cluster-robust standard errors on `hh1`) for all children aged 0-4, for infants aged 0-1 (adding feeding and ANC predictors), and for children aged 2-4.
-5. **Model assessment:** joint Wald tests for multi-level factors, survey-weighted ROC-AUC and a decile calibration table.
-6. **Further analyses (see known issues below):** Poisson regression for prevalence ratios, interaction tests, a multilevel model and an L2-penalized logistic model.
+The notebook reports 22,311 eligible records and 552 severe-wasting cases (2.47% unweighted). The R output reports design-weighted prevalence of **2.52%**. The outcome is `severe_wasting`, intended to represent severe wasting based on weight-for-height z-score; confirm its exact coding and cut-off in the source codebook before final reporting.
 
-## Key findings
+Survey design variables: cluster/PSU `hh1`, stratum `strata`, child weight `chweight`. The Stata reference uses `svyset hh1 [pweight=chweight], strata(strata) singleunit(centered)`. The R script uses `survey.lonely.psu = "adjust"`; this may not be identical to Stata's setting and must be checked.
 
-**Univariate (all children, 0-4)**
+## Current outcome of the research so far
 
-| Predictor | Result |
-|---|---|
-| Child's age (`ub2`) | Strongest association: prevalence falls from 3.86% at age 0 to 1.75% at age 4 (trend OR 0.81 per year, p < 0.001) |
-| Sex | Boys 2.89% vs girls 2.11% (Rao-Scott F = 9.90, p = 0.0017) |
-| Illness in last 2 weeks | Diarrhoea 3.72% vs 2.42% (p = 0.009); cough (p = 0.026); any illness (p = 0.007) |
-| Wealth quintile | Declining trend, OR 0.92 per quintile (p = 0.024) |
-| Toilet type | Borderline (p = 0.056) |
-| Not significant | Urban/rural, division, water source, fuel type, electricity, maternal education trend, parity, maternal age (as a continuous variable) |
+These values are from CSV output files committed to this branch. They are **provisional** until the script is reproduced and estimates are checked against Stata.
 
-**Infants aged 0-1 (univariate)**
-- Grain consumption (p = 0.0002), flesh foods (p = 0.0001) and ANC visit category (p = 0.007) are associated with lower prevalence.
-- Dietary diversity score: OR 0.86 per item (95% CI 0.80-0.94). Food variety score: OR 0.91 (0.85-0.97). ANC category trend: OR 0.71 (0.57-0.88).
-- Breastfeeding status and bottle feeding show no association.
+- **Age:** the core logistic model reports OR **0.80 per additional year** (95% CI 0.74–0.86). A natural-spline test indicates that the age relationship is not fully linear (F = 12.35, p < 0.001). The final model should represent age flexibly.
+- **Sex:** adjusted OR for girls versus boys is **0.72** (95% CI 0.58–0.88). Weighted prevalence is about **2.11% for girls and 2.89% for boys**.
+- **Recent illness:** diarrhoea OR ≈ 1.35 (95% CI 0.94–1.93); cough OR ≈ 1.17 (0.92–1.48); breathing difficulty OR ≈ 0.92 (0.65–1.29). These adjusted intervals include 1, so the current model does not provide clear evidence of associations.
+- **Maternal age:** two categories have individual ORs around 1.75 and 1.82, but the overall joint test is not significant (p = 0.177). Treat individual category results as exploratory.
+- **Toilet category:** one small category has OR ≈ 2.34 (95% CI 1.06–5.14), but the joint test is not significant (p = 0.151). Do not claim an overall toilet-type association from this one category.
+- **Division:** the joint test is significant in the current output (p = 0.0176), suggesting geographic differences may merit follow-up. This does not identify a cause.
+- **Wealth and education:** their joint tests are not significant in the current model (wealth p = 0.632; education p = 0.633).
+- **Alternative outcomes:** weighted prevalence is about **10.37% for moderate wasting** and **12.88% for any wasting**, subject to verifying outcome definitions.
+- **Sample flow:** 22,311 eligible children / 552 cases; complete-case core model: 22,017 children / 543 cases.
+- **Prediction:** the secondary notebook reports grouped-fold random-forest ROC-AUC ≈ 0.536; the main notebook reports in-sample AUC ≈ 0.635 for a different model/sample. These are not directly comparable, and useful predictive performance has not been demonstrated.
+- **Calibration:** the current decile table is in-sample. In the highest-risk decile, predicted prevalence is 5.24% versus observed 5.96%; this is not external validation.
 
-**Multivariable, all children 0-4 (N = 22,017)**
-- Older age: AOR 0.80 per year (95% CI 0.74-0.86).
-- Female sex: AOR 0.72 (0.58-0.88).
-- Older maternal age categories 4 and 5: AOR 1.75 (1.07-2.86) and 1.82 (1.08-3.05).
-- Toilet category 3: AOR 2.34 (1.06-5.13). This category is small, so treat it with caution.
-- Joint Wald test: division is significant (p = 0.017). Education, water source, fuel, toilet type and wealth are not significant jointly.
-- Discrimination is modest (survey-weighted ROC-AUC = 0.635), but calibration is good across deciles: mean predicted risk 1.0%-5.4% vs observed 1.2%-5.1%.
+## Main gaps
 
-**Multivariable, infants 0-1 (N = 8,713)**
-- Female sex: AOR 0.73 (0.56-0.96).
-- Older maternal age categories 4 and 5: AOR 2.09 and 2.36.
-- Wealth quintile 4: AOR 0.54 (0.31-0.96).
+1. Reproduce the output CSVs locally. Resolve the Windows Application Control block on `readr.dll` with appropriate security/administrator support; do not disable security globally.
+2. Compare weighted prevalence, confidence intervals, coefficients, and tests with Stata `svy:`. R's `adjust` lonely-PSU option may differ from Stata's `singleunit(centered)`.
+3. Verify outcome and predictor coding against the source codebook.
+4. Use a flexible age term in the primary model because the spline test suggests non-linearity.
+5. Review sparse categories, multiple testing, convergence, and complete-case selection. Some maternal-age and toilet-category results are individual-level findings while their overall factor tests are not significant.
+6. Feeding and infant variables have roughly 60% missingness in the full child dataset because they are mainly collected for younger children; analyze them in the correct age subpopulation.
+7. Repair notebook reproducibility issues and investigate the secondary GLM's large coefficients/missing standard errors.
+8. For prediction, use PSU-grouped held-out validation and report weighted ROC-AUC, precision–recall metrics, and held-out calibration.
+9. Describe findings as observational associations, not causes.
 
-## Known issues and limitations
+## Run the R follow-up
 
-- **Regression and design:** regression models use weights with cluster-robust SEs on `hh1`, but strata are not used in the regression variance. Rao-Scott F-tests use an average design effect across categories, so they approximate the full survey-package procedure. For publication-grade results, confirm key estimates in Stata (`svy:`) or R (`survey`).
-- **Sparse categories:** `parity_cat == 0` has 29 children and no cases (collapsed into category 1 in the main models). Where it is not collapsed, the estimates become unstable (e.g. extreme prevalence ratios and an infinite-width CI in the 2-4 model).
-- **Interaction tests:** `young × wealth`, `young × urban` and `female × young` produce degenerate output (enormous coefficients, missing SEs). `young` is a deterministic function of `ub2`, so the model is collinear and the interaction results are not interpretable yet.
-- **Multilevel model:** the mixed-effects cell has no output and uses a function that does not exist in `statsmodels.formula.api`; it needs to be replaced with `BinomialBayesMixedGLM` or an R/Stata mixed model.
-- **Reproducibility:** some cells (Poisson, interactions, joint Wald tests, ROC-AUC and calibration, ridge) use `df_multi`, `glm_main` and `main_formula`, which are not defined in the notebook. They should be defined in an earlier cell before the notebook can be run top to bottom.
-- **Sample size:** with only 552 events, models are limited to a moderate number of parameters and many subgroup estimates are imprecise.
+Install packages:
 
-## How to run
+```r
+install.packages(c("haven", "dplyr", "survey"), repos = "https://cloud.r-project.org")
+```
 
-1. Place `MICS-child-ISRC.dta` in the same folder as the notebooks.
-2. Install dependencies: `pip install pandas numpy scipy statsmodels scikit-learn shap jupyter`.
-3. Open `eda.ipynb` and run cells in order (fix the undefined-variable issue above first).
+From the repository root:
 
-## Next steps
+```bash
+Rscript analysis_followup.R MICS-child-ISRC.dta outputs
+```
 
-- Fix the undefined variables and the multilevel and interaction cells.
-- Replace `young` with `ub2` (or drop it) in interaction models.
-- Confirm design-based estimates in Stata or R.
-- Add penalized or Firth models for sparse categories.
+In Windows PowerShell, if R is not on PATH:
+
+```powershell
+& "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" analysis_followup.R MICS-child-ISRC.dta outputs
+```
+
+## Bottom line
+
+The clearest provisional signals are child age and sex; the age relationship appears non-linear. The division joint test suggests geographic differences may be present. Evidence for wealth, education, recent illness, maternal age overall, and toilet category overall is less conclusive. Reproduce the outputs and validate the survey estimates before presenting final findings.
