@@ -88,3 +88,18 @@ Design-aware exploratory and inferential analysis of **severe wasting** (`severe
 - Replace `young` with `ub2` (or drop it) in interaction models.
 - Confirm design-based estimates in Stata or R.
 - Add penalized or Firth models for sparse categories.
+
+
+## Reproducible follow-up analysis
+
+A new R-based follow-up pipeline is available in [`analysis_followup.R`](analysis_followup.R), with method and interpretation notes in [`FOLLOWUP_ANALYSIS.md`](FOLLOWUP_ANALYSIS.md). It uses the `survey` package to explicitly represent the cluster, stratum, and child weight, and exports tables for subgroup prevalence, missingness/sample flow, adjusted odds ratios, adjusted prevalence ratios, joint tests, exploratory FDR-adjusted tests, age non-linearity, selected interactions, and in-sample calibration.
+
+Run from the repository root:
+
+```bash
+Rscript analysis_followup.R MICS-child-ISRC.dta outputs
+```
+
+Install R packages first with `install.packages(c("haven", "dplyr", "survey", "splines"))`.
+
+**Validation status:** the script and documentation have been added, but this commit does not contain newly computed results. Run it locally against the dataset and compare the design-based estimates with the reference Stata `svy:` analysis before reporting findings. In-sample calibration is not out-of-sample validation, and estimates remain observational associations.
