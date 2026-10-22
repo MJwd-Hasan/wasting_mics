@@ -47,7 +47,10 @@ Current provisional output:
 - Joint tests for wealth, education, maternal age, and toilet category are not significant at 5%.
 - Natural-spline age test: p < 0.001, suggesting age is not adequately described by a straight-line effect alone.
 
-These estimates are provisional: the local R run is blocked by Windows Application Control on `readr.dll`, and the committed outputs have not yet been independently reproduced on the current machine or compared with Stata.
+These estimates are provisional: the committed outputs were independently reproduced with the R script (R 4.3.3, Linux), but have not yet been compared with Stata. (On the author's Windows machine the local run was blocked by Windows Application Control on `readr.dll`.)
+
+### Infants and young children (ages 0-1)
+Feeding and antenatal-care variables exist only for children aged 0-1 (under 2), so they are analysed in a separate subpopulation: the survey design is built on all children and then subset, which keeps the sampling structure (and therefore the standard errors) correct. Dietary diversity (`dds`) is the sum of the seven food-group indicators, so it is never modelled together with them. Univariately, dietary diversity, flesh foods, grains and antenatal care are associated with lower prevalence; after adjustment dietary diversity and flesh foods remain associated while antenatal care weakens (it tracks household wealth). The full infant models have few events per parameter, so a smaller (parsimonious) model is the primary one.
 
 ### Sensitivity outcomes
 Current files report weighted prevalence of about 10.37% for moderate wasting and 12.88% for any wasting. Verify the outcome definitions and coding against the codebook.
@@ -63,7 +66,7 @@ No causal interpretation is supported.
 
 ## 7. Limitations and unresolved work
 
-1. **Reproducibility:** local R execution is blocked by Windows application control. Regenerate the committed CSVs using the current script.
+1. **Reproducibility:** the R outputs reproduce (checked on an independent machine). The Python notebooks still contain cells that use undefined variables.
 2. **Survey validation:** compare prevalence, standard errors, confidence intervals, coefficients, and tests with Stata `svy:`. Lonely-PSU settings may differ.
 3. **Coding:** verify outcome definition, predictor labels, category references, and alternative outcomes against the source codebook.
 4. **Age non-linearity:** the spline test suggests the linear age term alone may be too restrictive.
@@ -75,9 +78,8 @@ No causal interpretation is supported.
 
 ## 8. Next steps
 
-1. Resolve the Windows DLL block with appropriate security/administrator support; do not disable security globally.
-2. Run the R script and compare its generated CSVs with the committed outputs.
-3. Compare key estimates with Stata `svy:`.
+1. Compare key estimates with Stata `svy:`.
+2. Verify predictor coding against the codebook.
 4. Use flexible age modelling and review sparse categories, missingness, and convergence.
 5. Re-run the notebooks from a clean kernel and fix reproducibility/model-diagnostic issues.
 6. Update interpretation only after validation.

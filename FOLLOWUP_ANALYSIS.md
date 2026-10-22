@@ -2,7 +2,7 @@
 
 ## Status
 
-Output CSVs from `analysis_followup.R` are present in this branch. The local run currently fails because Windows Application Control blocks `readr.dll`; the outputs have not been independently reproduced on the current machine or checked against Stata. Treat the results below as **provisional**.
+Output CSVs from `analysis_followup.R` are present in this branch. The script was **independently re-run** (R 4.3.3, Linux) and the original 14 tables reproduced to about 1e-14. They have still not been checked against Stata, so treat the results below as **provisional**. (On the author's Windows machine the local run was blocked because Windows Application Control stopped `readr.dll`; that is a machine issue, not a script problem.)
 
 ## Research question and sample
 
@@ -49,6 +49,39 @@ The calibration table is in-sample. In the highest-risk decile, predicted preval
 
 The secondary Python notebook reports weighted random-forest ROC-AUC around 0.536 using cluster-grouped folds. The main notebook reports in-sample AUC around 0.635 for a different model/sample. These values are not directly comparable; useful predictive performance has not been established.
 
+## Infants and young children, ages 0-1
+
+Ages 0-1 means completed years 0 and 1 (children under 2): 8,888 children and 297 cases; 8,713 children and 291 cases with complete data. The analysis uses `subset()` on the full survey design so stratum and PSU structure stay intact. `dds` is exactly the sum of the seven `fg_*` indicators, so they are never in the same model.
+
+### Univariate (design-adjusted, Benjamini-Hochberg across 13 tests)
+
+| Variable | Result | FDR p |
+|---|---|---|
+| `fg_flesh` | 3.93% (no) vs 2.15% (yes); F p = 0.0001 | 0.0012 |
+| `fg_grain` | 4.43% vs 2.73%; F p = 0.0002 | 0.0014 |
+| `dds` | OR 0.86 per food group (0.80-0.94), p = 0.0005 | 0.0023 |
+| `anc_cat` (trend) | OR 0.71 (0.57-0.88), p = 0.0018 | 0.0060 |
+| `anc_cat` (categories) | 4.88% / 3.68% / 2.58%; F p = 0.008 | 0.017 |
+| `fvs` | OR 0.91 (0.85-0.97), p = 0.006 | 0.015 |
+| `bf_status`, `bottle`, other `fg_*` | p >= 0.089 | >= 0.149 |
+
+### Multivariable
+
+| Model | Parameters | Events per parameter | Key results |
+|---|---|---|---|
+| C, parsimonious (age, sex, diarrhoea, wealth, urban, `dds`, `anc_cat`) | 11 | 26.5 | `dds` OR 0.90 (0.81-1.00), p = 0.045; ANC 4+ vs none 0.65 (0.39-1.07), p = 0.091; girls 0.75 (0.57-0.98); wealth Q4 vs Q1 0.60 (0.39-0.92) |
+| A, full adjusters + `dds`, ANC, breastfeeding, bottle | 45 | 6.5 | `dds` OR 0.90 (0.80-1.00), p = 0.048; ANC joint p = 0.17; breastfeeding joint p = 0.28 |
+| B, full adjusters + 7 food groups, ANC, breastfeeding, bottle | 51 | 5.7 | `fg_flesh` OR 0.65 (0.45-0.95), p = 0.026; `fg_grain` OR 0.69 (0.48-1.01), p = 0.054 |
+
+Models A and B have too few events per parameter and are shown for transparency; Model C is the primary infant model.
+
+### Interpretation
+
+- Dietary diversity, flesh foods and grains stay associated with lower odds after adjustment, though the confidence intervals are close to 1. Dietary diversity holds within age 0 (OR 0.87, p = 0.036) and age 1 (OR 0.87, p = 0.088), so it is not just an age effect. The relationship is not linear (spline p = 0.020): prevalence falls once a child eats at least 2 food groups.
+- The ANC signal weakens after adjustment, consistent with confounding by wealth (17.8% of the poorest infants had no ANC vs 1.6% of the richest). Do not claim an independent ANC effect.
+- Breastfeeding status and bottle feeding show no association.
+- Diet is one 24-hour recall in a cross-sectional survey; reverse causation (sick or wasted children eating less) cannot be excluded. These are associations only.
+
 ## Key output files
 
 | File | What it tells you |
@@ -64,21 +97,23 @@ The secondary Python notebook reports weighted random-forest ROC-AUC around 0.53
 | `interaction_tests.csv` | Selected exploratory interactions. |
 | `in_sample_calibration_deciles.csv`, `in_sample_brier.csv` | In-sample calibration diagnostics. |
 | `sensitivity_*_prevalence.csv` | Alternative outcome prevalence. |
+| `univariate_tests_fdr.csv` | Design-adjusted univariate tests (all children) with FDR adjustment. Not produced before; a silent `svychisq` error is now fixed. |
+| `infant_*.csv` | Infant-subpopulation sample flow, prevalence, univariate tests, three models, joint tests, dds-by-age and non-linearity (see README). |
 
-The presence of CSVs does not by itself establish that the estimates are valid. Reproduce them with the current script, inspect warnings and convergence, and document which script/data version generated them.
+The presence of CSVs does not by itself establish that the estimates are valid. They were reproduced with the current script (R 4.3.3), but still need comparison with Stata.
 
 ## Survey design
 
-The R script uses PSU `hh1`, stratum `strata`, and weight `chweight`. The reference Stata setup uses `singleunit(centered)`; R currently sets `survey.lonely.psu = "adjust"`. Compare prevalence, standard errors, confidence intervals, coefficients, and tests with Stata `svy:` rather than assuming the two settings are identical.
+The R script uses PSU `hh1`, stratum `strata`, and weight `chweight`. The reference Stata setup uses `singleunit(centered)`; R sets `survey.lonely.psu = "adjust"`. In this dataset no stratum has a single PSU (33-451 PSUs each), so the two settings cannot differ. Still compare prevalence, standard errors, confidence intervals, coefficients, and tests with Stata `svy:`.
 
 The core model is complete-case. Infant feeding variables have roughly 60% missingness in the full child file because they are mainly collected for younger children; analyze them in the appropriate subpopulation.
 
 ## Gaps to close
 
-1. Resolve the Windows DLL block through appropriate security/administrator support; do not disable Windows security globally.
-2. Re-run the R script and compare every output against the committed CSVs.
-3. Validate the outcome and predictor coding with the source codebook.
-4. Compare key R results with Stata `svy:`.
+1. Compare key R results with Stata `svy:` (the R outputs themselves are now reproduced).
+2. Validate predictor coding with the source codebook (the outcome was verified: it equals WHZ < -3).
+3. Consider multiple imputation and Firth/penalized models for the infant analysis (about 6-7 events per parameter in the full models).
+4. Add an infant-subpopulation sensitivity analysis excluding children who are not breastfed yesterday or using a dds spline.
 5. Use flexible age modelling; review sparse categories, multiple comparisons, missingness, and convergence.
 6. Fix undefined variables and investigate the secondary notebook's very large GLM coefficients and missing standard errors.
 7. For prediction, use held-out PSU-grouped validation, weighted ROC-AUC, precision–recall metrics, and held-out calibration.
