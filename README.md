@@ -10,7 +10,9 @@ This project explores child, maternal, and household factors associated with **s
 - [Follow-up results, interpretation, and gaps](FOLLOWUP_ANALYSIS.md): readable summary of current outputs.
 - [R follow-up script](analysis_followup.R): survey models, infant-subpopulation models, tests, diagnostics.
 - [Main exploratory notebook](eda.ipynb): data prep, **extended EDA (sections 1-12)**, univariate and multivariable tests.
-- [Secondary modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP.
+- [Tree-based prediction notebook](models.ipynb): Decision Tree, Random Forest, XGBoost and LightGBM (untuned) with cross-validation, ROC curves and SHAP.
+- [SHAP and prediction results](SHAP_results.md): tables, figures and interpretation from `models.ipynb`.
+- [Earlier modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP (superseded by `models.ipynb`).
 - [`outputs/`](outputs): CSV tables written by `analysis_followup.R`.
 
 ## Research question and data
@@ -55,7 +57,21 @@ How to read this:
 
 ### Prediction
 
-The weighted in-sample Brier score of the core model (0.02436) is nearly the same as a no-skill model that predicts the average prevalence (0.02453), and the cluster-grouped random-forest ROC-AUC is about 0.54. The models describe risk factors; they are not useful for prediction. The 0.635 in-sample AUC in `eda.ipynb` is optimistic and from a different sample.
+The weighted in-sample Brier score of the core survey model (0.02436) is nearly the same as a no-skill model that predicts the average prevalence (0.02453). The tree-based experiment below confirms that prediction is weak. The 0.635 in-sample AUC in `eda.ipynb` is optimistic and from a different sample.
+
+## Tree-based prediction and SHAP (`models.ipynb`)
+
+Four untuned tree models (Decision Tree, Random Forest, XGBoost, LightGBM) were cross-validated with PSU-grouped, stratified 5-fold splits. Full tables, figures and caveats are in [SHAP_results.md](SHAP_results.md).
+
+| Analysis | Best model | Mean ROC AUC (5 folds) | Other models |
+|---|---|---|---|
+| A: all children, 0-4 (22,311; 552 cases) | LightGBM | **0.542** | Random Forest 0.534, XGBoost 0.526, Decision Tree 0.503 |
+| B: ages 0-1 with feeding and ANC variables (8,888; 297 cases) | XGBoost | **0.552** | Random Forest 0.547, LightGBM 0.544, Decision Tree 0.503 |
+
+- **Weak prediction:** AUC is only slightly above chance (permutation p = 0.020 and 0.039). The top 10% highest-risk children contain 14-15% of cases (10% by chance). Training AUC is 0.97-1.00, so the raw ensembles overfit. A two-variable logistic regression (age + sex) scores 0.588 in Analysis A, better than all four tree models.
+- **SHAP (out of fold, best model):** child age is the top predictor in Analysis A (17% of importance), followed by mother's age, wealth, division, number of births and sex. In Analysis B the diet variables (`dds` and food groups) carry about 27% of the SHAP importance, with `dds`, `fg_flesh` and ANC all lowering predicted risk when higher.
+- **Agreement with the survey analysis:** age, sex, wealth, diet and ANC agree. Maternal age ranks high in SHAP but is not supported by the inference and likely reflects overfitting.
+- **Caution:** because the models are near chance, SHAP shows what these models learned, not reliable risk factors; no causal claims.
 
 ## Extended EDA added to `eda.ipynb`
 
@@ -66,6 +82,8 @@ Section "Extended Exploratory Data Analysis" (right after data preparation) cove
 - Several categories are too small for stable estimates (`toilet_cat` 3: 12 cases; `fuel_cat` 4: 5; unmarried mothers: 9; `parity_cat` 0: 29 children, 0 cases, likely non-mother caretakers).
 
 ## Main gaps
+
+0. For prediction, the raw tree models are barely above chance; if prediction matters, try regularised or tuned models, class weighting, and fewer/shallower trees, and keep comparing with a simple age + sex logistic regression.
 
 1. Compare weighted prevalence, confidence intervals, coefficients, and tests with Stata `svy:`.
 2. Verify predictor coding against the source codebook (the outcome coding is now verified).
@@ -94,6 +112,15 @@ In Windows PowerShell, if R is not on PATH:
 ```powershell
 & "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" analysis_followup.R MICS-child-ISRC.dta outputs
 ```
+
+## Output files (tree-based models)
+
+| File | Content |
+|---|---|
+| `outputs/ml_cv_summary_*.csv`, `outputs/ml_cv_fold_metrics_*.csv` | Cross-validation results (A = `all_children`, B = `infants`) |
+| `outputs/ml_reference_logistic.csv`, `outputs/ml_permutation_check.csv` | Reference logistic regression and permutation test |
+| `outputs/ml_shap_importance_*.csv` | Mean absolute SHAP, share and direction per variable |
+| `figures/ml_*.png` | ROC/PR curves and SHAP plots |
 
 ## Output files (infant additions)
 

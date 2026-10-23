@@ -55,8 +55,12 @@ Feeding and antenatal-care variables exist only for children aged 0-1 (under 2),
 ### Sensitivity outcomes
 Current files report weighted prevalence of about 10.37% for moderate wasting and 12.88% for any wasting. Verify the outcome definitions and coding against the codebook.
 
-### Prediction experiment
-The secondary Python notebook reports weighted random-forest ROC-AUC around 0.536 using cluster-grouped folds. The main notebook reports in-sample AUC around 0.635 for a different model/sample. These are not directly comparable and do not yet establish a reliable prediction tool.
+### Prediction with tree-based models and SHAP
+Because the inferential and non-linear models did not clearly identify the important variables, a prediction-focused analysis was added in `models.ipynb`. Four tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM) were fitted with their default settings (no hyperparameter tuning). They were evaluated with stratified, PSU-grouped 5-fold cross-validation: every cluster stays entirely in one fold, so the test children come from neighbourhoods the model never saw. Scores reported are ROC AUC, PR AUC, Brier score and the share of cases found in the highest-risk 10% of children, plus ROC and precision-recall curves. Two analyses were run: all children (ages 0-4, 17 predictors) and children aged 0-1 (28 predictors, adding diet, breastfeeding and antenatal care). Missing values were left for the tree models to handle, and outcome-derived columns and identifiers were excluded.
+
+SHAP (a method that splits each prediction into per-variable contributions) was then applied to the best model in each analysis. To avoid explaining the model on data it had memorised, SHAP values were computed out of fold: the model is refitted on each training fold and explained on held-out children.
+
+Main results: the best cross-validated ROC AUC is about 0.54 for all children (LightGBM) and 0.55 for children aged 0-1 (XGBoost), against 0.50 for chance. The models fit the training data almost perfectly but generalise poorly, so they overfit. Label-permutation tests show the best models are above chance but only marginally, and a simple logistic regression with child age and sex (AUC 0.588) beats all four raw trees for all children. SHAP ranks child age first, then mother's age, wealth, division, births and sex; among children under 2, diet (dietary diversity and food groups, about 27% of importance), flesh foods and antenatal care push predicted risk down when higher. Age, sex, wealth, diet and ANC agree with the survey analysis; maternal age does not and is probably overfitting. See `SHAP_results.md` for details.
 
 ## 6. What the results suggest
 
@@ -81,6 +85,7 @@ No causal interpretation is supported.
 1. Compare key estimates with Stata `svy:`.
 2. Verify predictor coding against the codebook.
 4. Use flexible age modelling and review sparse categories, missingness, and convergence.
+4a. If prediction matters, test regularised/tuned tree models and class weighting against the simple age + sex logistic baseline, and use more cases per fold for the infant analysis.
 5. Re-run the notebooks from a clean kernel and fix reproducibility/model-diagnostic issues.
 6. Update interpretation only after validation.
 

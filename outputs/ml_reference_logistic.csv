@@ -1,0 +1,5 @@
+analysis,reference model,ROC AUC
+A: all children,Logistic regression: ub2,0.584 ± 0.025
+A: all children,Logistic regression: ub2 + female,0.588 ± 0.025
+B: ages 0-1,Logistic regression: ub2,0.542 ± 0.032
+B: ages 0-1,Logistic regression: ub2 + female,0.555 ± 0.040
