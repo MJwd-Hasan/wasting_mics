@@ -1,0 +1,18 @@
+feature,label,mean_abs_shap,share_%,direction_rho
+ub2,Age of child in completed years,0.286592569887145,17.4,-0.88
+wb4,Age of mother/caretaker,0.2166299048043053,13.1,0.11
+wealth,"Wealth index quintile (ordered, 1-5)",0.14119686604326262,8.6,-0.61
+division,Division,0.12626506775210355,7.6,-0.36
+cm11,Total number of live births (children ever born),0.12011226535196386,7.3,-0.33
+female,Child is female,0.11391933983075833,6.9,-0.79
+water_cat,Drinking water source (collapsed),0.11162763671039663,6.8,-0.67
+fuel_cat,Cookstove fuel category,0.10490434384639556,6.4,0.15
+edu_level,"Mother/caretaker education (ordered, 0-5)",0.08949091022042209,5.4,-0.06
+toilet_cat,Toilet type (collapsed),0.08878597907167554,5.4,-0.25
+breathing_2w,Child had difficulty breathing in last 2 weeks,0.07501267061576358,4.5,-0.41
+urban,Area: urban,0.06342568425581602,3.8,-0.58
+cough_2w,Child had cough in last 2 weeks,0.05613083739397156,3.4,0.31
+diarrhoea_2w,Child had diarrhoea in last 2 weeks,0.03164785826314455,1.9,0.34
+electricity,Household has electricity,0.012723691308757232,0.8,-0.2
+mother_married,Mother/caretaker currently married/in union,0.009118963744853324,0.6,-0.14
+insured,Household has health insurance,0.002993386383900262,0.2,0.07

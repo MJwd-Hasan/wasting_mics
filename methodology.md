@@ -47,13 +47,20 @@ Current provisional output:
 - Joint tests for wealth, education, maternal age, and toilet category are not significant at 5%.
 - Natural-spline age test: p < 0.001, suggesting age is not adequately described by a straight-line effect alone.
 
-These estimates are provisional: the local R run is blocked by Windows Application Control on `readr.dll`, and the committed outputs have not yet been independently reproduced on the current machine or compared with Stata.
+These estimates are provisional: the committed outputs were independently reproduced with the R script (R 4.3.3, Linux), but have not yet been compared with Stata. (On the author's Windows machine the local run was blocked by Windows Application Control on `readr.dll`.)
+
+### Infants and young children (ages 0-1)
+Feeding and antenatal-care variables exist only for children aged 0-1 (under 2), so they are analysed in a separate subpopulation: the survey design is built on all children and then subset, which keeps the sampling structure (and therefore the standard errors) correct. Dietary diversity (`dds`) is the sum of the seven food-group indicators, so it is never modelled together with them. Univariately, dietary diversity, flesh foods, grains and antenatal care are associated with lower prevalence; after adjustment dietary diversity and flesh foods remain associated while antenatal care weakens (it tracks household wealth). The full infant models have few events per parameter, so a smaller (parsimonious) model is the primary one.
 
 ### Sensitivity outcomes
 Current files report weighted prevalence of about 10.37% for moderate wasting and 12.88% for any wasting. Verify the outcome definitions and coding against the codebook.
 
-### Prediction experiment
-The secondary Python notebook reports weighted random-forest ROC-AUC around 0.536 using cluster-grouped folds. The main notebook reports in-sample AUC around 0.635 for a different model/sample. These are not directly comparable and do not yet establish a reliable prediction tool.
+### Prediction with tree-based models and SHAP
+Because the inferential and non-linear models did not clearly identify the important variables, a prediction-focused analysis was added in `models.ipynb`. Four tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM) were fitted with their default settings (no hyperparameter tuning). They were evaluated with stratified, PSU-grouped 5-fold cross-validation: every cluster stays entirely in one fold, so the test children come from neighbourhoods the model never saw. Scores reported are ROC AUC, PR AUC, Brier score and the share of cases found in the highest-risk 10% of children, plus ROC and precision-recall curves. Two analyses were run: all children (ages 0-4, 17 predictors) and children aged 0-1 (28 predictors, adding diet, breastfeeding and antenatal care). Missing values were left for the tree models to handle, and outcome-derived columns and identifiers were excluded.
+
+SHAP (a method that splits each prediction into per-variable contributions) was then applied to the best model in each analysis. To avoid explaining the model on data it had memorised, SHAP values were computed out of fold: the model is refitted on each training fold and explained on held-out children.
+
+Main results: the best cross-validated ROC AUC is about 0.54 for all children (LightGBM) and 0.55 for children aged 0-1 (XGBoost), against 0.50 for chance. The models fit the training data almost perfectly but generalise poorly, so they overfit. Label-permutation tests show the best models are above chance but only marginally, and a simple logistic regression with child age and sex (AUC 0.588) beats all four raw trees for all children. SHAP ranks child age first, then mother's age, wealth, division, births and sex; among children under 2, diet (dietary diversity and food groups, about 27% of importance), flesh foods and antenatal care push predicted risk down when higher. Age, sex, wealth, diet and ANC agree with the survey analysis; maternal age does not and is probably overfitting. See `SHAP_results.md` for details.
 
 ## 6. What the results suggest
 
@@ -63,7 +70,7 @@ No causal interpretation is supported.
 
 ## 7. Limitations and unresolved work
 
-1. **Reproducibility:** local R execution is blocked by Windows application control. Regenerate the committed CSVs using the current script.
+1. **Reproducibility:** the R outputs reproduce (checked on an independent machine). The Python notebooks still contain cells that use undefined variables.
 2. **Survey validation:** compare prevalence, standard errors, confidence intervals, coefficients, and tests with Stata `svy:`. Lonely-PSU settings may differ.
 3. **Coding:** verify outcome definition, predictor labels, category references, and alternative outcomes against the source codebook.
 4. **Age non-linearity:** the spline test suggests the linear age term alone may be too restrictive.
@@ -75,10 +82,10 @@ No causal interpretation is supported.
 
 ## 8. Next steps
 
-1. Resolve the Windows DLL block with appropriate security/administrator support; do not disable security globally.
-2. Run the R script and compare its generated CSVs with the committed outputs.
-3. Compare key estimates with Stata `svy:`.
+1. Compare key estimates with Stata `svy:`.
+2. Verify predictor coding against the codebook.
 4. Use flexible age modelling and review sparse categories, missingness, and convergence.
+4a. If prediction matters, test regularised/tuned tree models and class weighting against the simple age + sex logistic baseline, and use more cases per fold for the infant analysis.
 5. Re-run the notebooks from a clean kernel and fix reproducibility/model-diagnostic issues.
 6. Update interpretation only after validation.
 

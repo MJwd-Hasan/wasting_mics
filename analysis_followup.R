@@ -264,20 +264,29 @@ if (length(interaction_results)) {
 }
 
 # Exploratory univariate design-adjusted tests with Benjamini-Hochberg FDR.
+# survey::svychisq() cannot take factor(var) inside its formula (it fails with
+# "undefined columns selected"), so factor columns are created beforehand and
+# any failure is reported instead of being silently swallowed.
+uni_dat <- dat
+for (v in group_vars) uni_dat[[paste0(v, "_f")]] <- factor(uni_dat[[v]])
+uni_dat$sw_f <- factor(uni_dat$severe_wasting)
+des_uni <- survey::svydesign(ids = ~hh1, strata = ~strata, weights = ~chweight,
+                             data = uni_dat, nest = TRUE)
 uni_results <- list()
 for (v in group_vars) {
-  if (v %in% names(dat)) {
-    test <- tryCatch(
-      survey::svychisq(as.formula(paste("~factor(", v, ") + severe_wasting")),
-                       design = des, statistic = "F"),
-      error = function(e) NULL
-    )
-    if (!is.null(test)) uni_results[[v]] <- data.frame(
-      variable = v, statistic = as.numeric(test$statistic),
-      numerator_df = if (!is.null(test$parameter)) as.numeric(test$parameter[1]) else NA_real_,
-      p_value = as.numeric(test$p.value)
-    )
-  }
+  test <- tryCatch(
+    survey::svychisq(as.formula(paste0("~", v, "_f + sw_f")),
+                     design = des_uni, statistic = "F"),
+    error = function(e) {
+      message("svychisq failed for ", v, ": ", conditionMessage(e))
+      NULL
+    }
+  )
+  if (!is.null(test)) uni_results[[v]] <- data.frame(
+    variable = v, statistic = as.numeric(test$statistic),
+    numerator_df = if (!is.null(test$parameter)) as.numeric(test$parameter[1]) else NA_real_,
+    p_value = as.numeric(test$p.value)
+  )
 }
 if (length(uni_results)) {
   utab <- bind_rows(uni_results)
@@ -319,6 +328,178 @@ for (outcome in intersect(c("mod_wasting", "any_wasting"), names(dat))) {
       standard_error = as.numeric(SE(prev)[1]) * 100
     ), file.path(out_dir, paste0("sensitivity_", outcome, "_prevalence.csv")),
     row.names = FALSE)
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Infant / young-child subpopulation (young == 1: completed age 0-1 years,
+# i.e. children under 2). Feeding (dds, fvs, fg_*, bf_status, bottle) and ANC
+# (anc_cat) variables exist only for this group, so they are analysed here.
+#
+# Subpopulation analysis: the design is built on ALL children and then
+# subset() is applied, which keeps the stratum / PSU structure intact so the
+# variance estimates remain valid (deleting rows before svydesign() would not).
+#
+# dds (0-7) is the sum of the seven fg_* indicators (correlation = 1), so they
+# must never enter the same model: Model A uses dds, Model B uses fg_*.
+# ---------------------------------------------------------------------------
+if ("young" %in% names(dat)) {
+  fg_vars <- intersect(c("fg_grain", "fg_legume", "fg_dairy", "fg_flesh",
+                         "fg_egg", "fg_vita", "fg_ofv"), names(dat))
+  inf_cat_vars <- intersect(c(fg_vars, "bf_status", "bottle", "anc_cat"), names(dat))
+  inf_score_vars <- intersect(c("dds", "fvs"), names(dat))
+
+  inf_dat <- dat
+  for (v in intersect(c("anc_cat", "bf_status"), names(inf_dat)))
+    inf_dat[[v]] <- factor(inf_dat[[v]])
+  if ("anc_cat" %in% names(dat)) inf_dat$anc_num <- as.numeric(as.character(dat$anc_cat))
+  for (v in inf_cat_vars) inf_dat[[paste0(v, "_f")]] <- factor(dat[[v]])
+  inf_dat$sw_f <- factor(inf_dat$severe_wasting)
+
+  is_young <- !is.na(inf_dat$young) & inf_dat$young == 1
+  infant_need <- unique(c(predictors, intersect("dds", names(dat)), fg_vars,
+                          intersect(c("anc_cat", "bf_status", "bottle"), names(dat))))
+  inf_dat$infant_cc <- is_young &
+    complete.cases(inf_dat[, intersect(infant_need, names(inf_dat)), drop = FALSE])
+
+  des_all <- survey::svydesign(ids = ~hh1, strata = ~strata, weights = ~chweight,
+                               data = inf_dat, nest = TRUE)
+  des_inf_cc <- subset(des_all, infant_cc)
+
+  write.csv(data.frame(
+    analysis = c("all_children", "young_0_1", "young_complete_case"),
+    n = c(nrow(inf_dat), sum(is_young), sum(inf_dat$infant_cc)),
+    events = c(sum(inf_dat$severe_wasting == 1),
+               sum(inf_dat$severe_wasting[is_young] == 1),
+               sum(inf_dat$severe_wasting[inf_dat$infant_cc] == 1))
+  ), file.path(out_dir, "infant_sample_flow.csv"), row.names = FALSE)
+
+  # Weighted prevalence by feeding / ANC category (design-based, subpopulation).
+  inf_prev <- list()
+  for (v in inf_cat_vars) {
+    d_v <- des_all[is_young & !is.na(inf_dat[[v]]), ]
+    est <- tryCatch(
+      survey::svyby(~severe_wasting, as.formula(paste0("~", v, "_f")), d_v,
+                    survey::svymean, na.rm = TRUE, vartype = c("se", "ci"),
+                    keep.names = FALSE),
+      error = function(e) { message("svyby failed for ", v, ": ", conditionMessage(e)); NULL })
+    if (!is.null(est)) {
+      tmp <- as.data.frame(est); names(tmp)[1] <- "level"
+      tmp$group_variable <- v
+      inf_prev[[v]] <- tmp
+    }
+  }
+  if (length(inf_prev)) write.csv(bind_rows(inf_prev),
+    file.path(out_dir, "infant_subgroup_prevalence.csv"), row.names = FALSE)
+
+  # Univariate tests (design-adjusted), BH-adjusted across all of them.
+  inf_uni <- list()
+  for (v in inf_cat_vars) {
+    d_v <- des_all[is_young & !is.na(inf_dat[[v]]), ]
+    t <- tryCatch(survey::svychisq(as.formula(paste0("~", v, "_f + sw_f")),
+                                   design = d_v, statistic = "F"),
+                  error = function(e) { message("svychisq failed for ", v, ": ", conditionMessage(e)); NULL })
+    if (!is.null(t)) inf_uni[[v]] <- data.frame(
+      variable = v, test = "Rao-Scott F (categorical)", statistic = as.numeric(t$statistic),
+      OR = NA_real_, OR_CI_low = NA_real_, OR_CI_high = NA_real_, p_value = as.numeric(t$p.value))
+  }
+  score_terms <- intersect(c(inf_score_vars, "anc_num"), names(inf_dat))
+  for (v in score_terms) {
+    d_v <- des_all[is_young & !is.na(inf_dat[[v]]), ]
+    f <- tryCatch(survey::svyglm(as.formula(paste("severe_wasting ~", v)), d_v,
+                                 family = quasibinomial()),
+                  error = function(e) { message("svyglm failed for ", v, ": ", conditionMessage(e)); NULL })
+    if (!is.null(f)) {
+      cf <- summary(f)$coefficients[v, ]
+      inf_uni[[v]] <- data.frame(
+        variable = v, test = "Wald trend (univariable, per unit)", statistic = unname(cf[3]),
+        OR = exp(cf[1]), OR_CI_low = exp(cf[1] - 1.96 * cf[2]),
+        OR_CI_high = exp(cf[1] + 1.96 * cf[2]), p_value = unname(cf[4]))
+    }
+  }
+  if (length(inf_uni)) {
+    itab <- bind_rows(inf_uni); rownames(itab) <- NULL
+    itab$p_fdr <- p.adjust(itab$p_value, method = "BH")
+    write.csv(itab, file.path(out_dir, "infant_univariate_tests.csv"), row.names = FALSE)
+  }
+
+  # Multivariable infant models. Core adjusters = the main-model predictors.
+  fit_infant <- function(extra, label) {
+    rhs_i <- c(rhs, extra)
+    fit <- survey::svyglm(as.formula(paste("severe_wasting ~", paste(rhs_i, collapse = " + "))),
+                          design = des_inf_cc, family = quasibinomial())
+    ct <- as.data.frame(summary(fit)$coefficients); ct$term <- rownames(ct)
+    names(ct)[1:4] <- c("estimate_log_odds", "std_error", "statistic", "p_value")
+    ct$OR <- exp(ct$estimate_log_odds)
+    ct$OR_CI_low <- exp(ct$estimate_log_odds - 1.96 * ct$std_error)
+    ct$OR_CI_high <- exp(ct$estimate_log_odds + 1.96 * ct$std_error)
+    write.csv(ct, file.path(out_dir, paste0("infant_model_", label, "_or.csv")), row.names = FALSE)
+    list(fit = fit, n_par = length(coef(fit)) - 1)
+  }
+  have <- function(x) x[x %in% names(inf_dat)]
+  mods <- list(
+    A_dds = fit_infant(have(c("dds", "anc_cat", "bf_status", "bottle")), "A_dds"),
+    B_foodgroups = fit_infant(have(c(fg_vars, "anc_cat", "bf_status", "bottle")), "B_foodgroups")
+  )
+  # Parsimonious model: fewer parameters for ~290 events.
+  rhs_c <- have(c("ub2", "female", "diarrhoea_2w", "wealth", "urban", "dds", "anc_cat"))
+  fit_c <- survey::svyglm(as.formula(paste("severe_wasting ~", paste(rhs_c, collapse = " + "))),
+                          design = des_inf_cc, family = quasibinomial())
+  ct <- as.data.frame(summary(fit_c)$coefficients); ct$term <- rownames(ct)
+  names(ct)[1:4] <- c("estimate_log_odds", "std_error", "statistic", "p_value")
+  ct$OR <- exp(ct$estimate_log_odds)
+  ct$OR_CI_low <- exp(ct$estimate_log_odds - 1.96 * ct$std_error)
+  ct$OR_CI_high <- exp(ct$estimate_log_odds + 1.96 * ct$std_error)
+  write.csv(ct, file.path(out_dir, "infant_model_C_parsimonious_or.csv"), row.names = FALSE)
+  mods$C_parsimonious <- list(fit = fit_c, n_par = length(coef(fit_c)) - 1)
+
+  n_cc <- sum(inf_dat$infant_cc); ev_cc <- sum(inf_dat$severe_wasting[inf_dat$infant_cc] == 1)
+  write.csv(data.frame(
+    model = names(mods), n = n_cc, events = ev_cc,
+    parameters = vapply(mods, function(m) m$n_par, numeric(1)),
+    events_per_parameter = round(ev_cc / vapply(mods, function(m) m$n_par, numeric(1)), 1)
+  ), file.path(out_dir, "infant_model_summary.csv"), row.names = FALSE)
+
+  # Joint tests for multi-level infant factors (models A and B).
+  inf_joint <- list()
+  for (m in c("A_dds", "B_foodgroups")) for (v in have(c("anc_cat", "bf_status"))) {
+    r <- tryCatch(survey::regTermTest(mods[[m]]$fit, as.formula(paste("~", v))), error = function(e) NULL)
+    if (!is.null(r)) inf_joint[[paste(m, v)]] <- data.frame(
+      model = m, variable = v, F_statistic = as.numeric(r$Ftest[1]),
+      numerator_df = as.numeric(r$df[1]), denominator_df = as.numeric(r$ddf[1]),
+      p_value = as.numeric(r$p))
+  }
+  if (length(inf_joint)) write.csv(bind_rows(inf_joint),
+    file.path(out_dir, "infant_joint_tests.csv"), row.names = FALSE)
+
+  # Is the dietary-diversity association just an age effect? Stratify by age
+  # and test non-linearity of dds (natural spline) adjusting for age and sex.
+  if ("dds" %in% names(inf_dat)) {
+    strat <- list()
+    for (a in sort(unique(inf_dat$ub2[is_young]))) {
+      d_a <- des_all[is_young & inf_dat$ub2 == a & !is.na(inf_dat$dds), ]
+      f <- tryCatch(survey::svyglm(severe_wasting ~ dds + female, d_a, family = quasibinomial()),
+                    error = function(e) NULL)
+      if (!is.null(f)) {
+        cf <- summary(f)$coefficients["dds", ]
+        strat[[as.character(a)]] <- data.frame(
+          age_years = a, n = sum(!is.na(inf_dat$dds) & is_young & inf_dat$ub2 == a),
+          events = sum(inf_dat$severe_wasting[!is.na(inf_dat$dds) & is_young & inf_dat$ub2 == a] == 1),
+          dds_OR = exp(cf[1]), OR_CI_low = exp(cf[1] - 1.96 * cf[2]),
+          OR_CI_high = exp(cf[1] + 1.96 * cf[2]), p_value = unname(cf[4]))
+      }
+    }
+    if (length(strat)) write.csv(bind_rows(strat), file.path(out_dir, "infant_dds_by_age.csv"), row.names = FALSE)
+    d_dds <- des_all[is_young & !is.na(inf_dat$dds), ]
+    f_ns <- tryCatch(survey::svyglm(severe_wasting ~ ub2 + female + splines::ns(dds, df = 3),
+                                    d_dds, family = quasibinomial()), error = function(e) NULL)
+    if (!is.null(f_ns)) {
+      r <- survey::regTermTest(f_ns, ~splines::ns(dds, df = 3))
+      write.csv(data.frame(test = "joint natural-spline dds term (adj. age, sex)",
+        F_statistic = as.numeric(r$Ftest[1]), numerator_df = as.numeric(r$df[1]),
+        denominator_df = as.numeric(r$ddf[1]), p_value = as.numeric(r$p)),
+        file.path(out_dir, "infant_dds_nonlinearity_test.csv"), row.names = FALSE)
+    }
   }
 }
 
