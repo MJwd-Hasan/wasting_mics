@@ -10,7 +10,7 @@ This project explores child, maternal, and household factors associated with **s
 - [Follow-up results, interpretation, and gaps](FOLLOWUP_ANALYSIS.md): readable summary of current outputs.
 - [R follow-up script](analysis_followup.R): survey models, infant-subpopulation models, tests, diagnostics.
 - [Main exploratory notebook](eda.ipynb): data prep, **extended EDA (sections 1-12)**, univariate and multivariable tests.
-- [Tree-based prediction notebook](models.ipynb): untuned Decision Tree, Random Forest, XGBoost and LightGBM with cross-validation, ROC curves and SHAP, plus a fair nested-CV comparison with tuned models and logistic regression.
+- [Tree-based prediction notebook](models.ipynb): untuned Decision Tree, Random Forest, XGBoost and LightGBM with cross-validation, ROC curves and SHAP, plus a fair nested-CV comparison with tuned models and logistic regression.\n- [Interpretable neural-network notebook](nn.ipynb) and [results](nn.md): two PyTorch Neural Additive Models for ages 0-4 and 0-1 using the same predictor sets as `models.ipynb`.
 - [SHAP and prediction results](SHAP_results.md): tables, figures and interpretation from `models.ipynb`.
 - [Earlier modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP (superseded by `models.ipynb`).
 - [`outputs/`](outputs): CSV tables written by `analysis_followup.R`.
@@ -96,6 +96,12 @@ Every model uses the same children, outer folds and preprocessing; tree hyperpar
 - **Under 2, the extra variables help a little:** tuned Random Forest is nominally best (+0.025 over weighted logistic, 95% CI 0.000 to 0.052) and the regularised logistic regression beats the plain one (+0.010, CI 0.003 to 0.018). Age + sex alone is lower here (0.548).
 - **Still modest, and over-confident:** AUC is at most about 0.60; PR AUC is about 0.035 (prevalence 0.025) in A and 0.046 (0.033) in B; the top 10% of predicted risk holds up to about 19% of cases in A (best models) and 15-16% in B (tree models); Brier is no better than the baseline. Calibration slopes are 0.3-0.8 for all complex models (age + sex: 0.93), so their probabilities need recalibration.
 - **Caution:** the Python weighted fit gives no design-based standard errors, the tuning budget is small, and SHAP was computed on the raw models, not the tuned ones. No causal claims.
+
+## Interpretable neural networks (`nn.ipynb`)
+
+Two PyTorch Neural Additive Models (NAMs) were added using exactly the same predictors as `models.ipynb`: one for all children aged 0-4 and one for ages 0-1/under 2. The additive architecture makes each original variable's logit contribution directly inspectable while still allowing nonlinear continuous effects. Evaluation again uses PSU-grouped stratified 5-fold cross-validation.
+
+The result is a useful negative finding: weighted out-of-fold ROC AUC is **0.492** for all children and **0.522** for ages 0-1. This is worse than the logistic/tuned-tree comparison already in the project (about 0.58-0.60). Feature-contribution rankings are therefore treated as unstable model descriptions, not new epidemiologic evidence. See [nn.md](nn.md) for interpretation and limitations.
 
 ## Extended EDA added to `eda.ipynb`
 
