@@ -62,6 +62,11 @@ SHAP (a method that splits each prediction into per-variable contributions) was 
 
 Main results: the best cross-validated ROC AUC is about 0.54 for all children (LightGBM) and 0.55 for children aged 0-1 (XGBoost), against 0.50 for chance. The models fit the training data almost perfectly but generalise poorly, so they overfit. Label-permutation tests show the best models are above chance but only marginally, and a simple logistic regression with child age and sex (AUC 0.588) beats all four raw trees for all children. SHAP ranks child age first, then mother's age, wealth, division, births and sex; among children under 2, diet (dietary diversity and food groups, about 27% of importance), flesh foods and antenatal care push predicted risk down when higher. Age, sex, wealth, diet and ANC agree with the survey analysis; maternal age does not and is probably overfitting. See `SHAP_results.md` for details.
 
+### Fair model comparison with tuning (nested cross-validation)
+The raw-model scores are not directly comparable with the in-sample AUC of 0.635 in `eda.ipynb`, and untuned trees overfit. A like-for-like comparison was therefore added: the same children, the same outer PSU-grouped 5-fold splits and the same preprocessing (imputation and one-hot encoding inside each training fold) for every model. Logistic regression with age and sex only, full unweighted and survey-weighted logistic regression, a more regularised weighted logistic regression, and Decision Tree, Random Forest, XGBoost and LightGBM were compared. The trees were tuned with a small random search using inner 3-fold PSU-grouped cross-validation inside each outer training fold, so the test fold is never used for tuning. Weighted models use the survey weight as a predictive sample weight (this gives no design-based standard errors). Reported are weighted and unweighted pooled out-of-fold ROC AUC, PR AUC, Brier score, share of cases in the top-risk 10%, and calibration intercept and slope; confidence intervals and paired differences come from a bootstrap that resamples whole PSUs (300 resamples).
+
+Main results: for all children the weighted out-of-fold AUC is about 0.58-0.59 for the logistic models, tuned Random Forest and tuned XGBoost, with intervals about ±0.03 wide; none is significantly better than the survey-weighted logistic regression, and age + sex alone scores 0.587. Tuning raises the trees from 0.50-0.54 to 0.55-0.58 but they still do not beat logistic regression. Among children under 2 the tuned Random Forest is nominally best (0.595, +0.025 over weighted logistic, 95% CI 0.000 to 0.052) and age + sex is lower (0.548), so diet, antenatal care and household variables add a small amount of discrimination. Calibration is poor for the complex models (slopes 0.3-0.8; only age + sex is near 1), and Brier scores equal the no-skill baseline. The out-of-fold AUC of the full weighted logistic regression is 0.580, so the earlier in-sample 0.635 was optimistic by about 0.05. The SHAP analysis above used the raw untuned models; repeating it on the tuned models is a sensible next step.
+
 ## 6. What the results suggest
 
 Age and sex are the clearest preliminary correlates. The age relationship appears non-linear, so a flexible age term should be considered in the primary model. The division joint test suggests geographic variation. Evidence for wealth, education, recent illness, maternal age overall, and toilet category overall is less conclusive. Isolated category-level results need caution when the overall factor test is not significant or categories are small.
@@ -77,7 +82,7 @@ No causal interpretation is supported.
 5. **Sparse events:** only 552 cases are reported in the eligible sample; small categories can yield unstable estimates.
 6. **Missing data:** the core model excludes incomplete cases. Infant feeding variables have roughly 60% missingness in the full file because they are mainly collected for younger children.
 7. **Notebook reproducibility:** some cells use variables not defined in the visible run order; the secondary GLM has very large coefficients and missing standard errors for some sparse terms.
-8. **Prediction:** held-out PSU-grouped validation, precision–recall metrics, and held-out calibration are still needed.
+8. **Prediction:** PSU-grouped nested validation, precision-recall metrics, calibration and cluster-bootstrap intervals are now reported (modest discrimination, poor calibration for complex models); external validation and repeated grouped CV are still missing.
 9. **Multiple testing and causality:** pre-specify key hypotheses, emphasize intervals, and describe results as associations.
 
 ## 8. Next steps
@@ -85,7 +90,7 @@ No causal interpretation is supported.
 1. Compare key estimates with Stata `svy:`.
 2. Verify predictor coding against the codebook.
 4. Use flexible age modelling and review sparse categories, missingness, and convergence.
-4a. If prediction matters, test regularised/tuned tree models and class weighting against the simple age + sex logistic baseline, and use more cases per fold for the infant analysis.
+4a. If prediction matters, repeat SHAP on the tuned Random Forest or XGBoost, recalibrate predicted probabilities, use repeated grouped CV with more cases per fold for the under-2 analysis, and keep the simple age + sex logistic regression as the benchmark.
 5. Re-run the notebooks from a clean kernel and fix reproducibility/model-diagnostic issues.
 6. Update interpretation only after validation.
 

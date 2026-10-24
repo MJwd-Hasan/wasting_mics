@@ -47,7 +47,7 @@ Current files report weighted prevalence of **10.37% for moderate wasting** and 
 ### Calibration and prediction
 The calibration table is in-sample. In the highest-risk decile, predicted prevalence is 5.24% and observed prevalence is 5.96%. This does not show how the model will perform on new data.
 
-The secondary Python notebook reports weighted random-forest ROC-AUC around 0.536 using cluster-grouped folds. The main notebook reports in-sample AUC around 0.635 for a different model/sample. These values are not directly comparable; useful predictive performance has not been established.
+Held-out results are in `models.ipynb` (see `SHAP_results.md`). With PSU-grouped nested cross-validation, the full survey-weighted logistic regression has an out-of-fold weighted ROC-AUC of 0.580 (95% cluster-bootstrap CI 0.553-0.611), compared with the 0.635 in-sample AUC from the main notebook, so the in-sample value was optimistic. Tuned tree models (Random Forest 0.584, XGBoost 0.585, LightGBM 0.560) and age + sex alone (0.587) score about the same, and raw untuned trees score 0.50-0.54. Among children under 2 the tuned Random Forest is nominally best (0.595). Brier scores equal the no-skill baseline and complex models are over-confident (calibration slopes 0.3-0.8), so useful predictive performance has not been established.
 
 ## Infants and young children, ages 0-1
 
@@ -116,7 +116,7 @@ The core model is complete-case. Infant feeding variables have roughly 60% missi
 4. Add an infant-subpopulation sensitivity analysis excluding children who are not breastfed yesterday or using a dds spline.
 5. Use flexible age modelling; review sparse categories, multiple comparisons, missingness, and convergence.
 6. Fix undefined variables and investigate the secondary notebook's very large GLM coefficients and missing standard errors.
-7. For prediction, use held-out PSU-grouped validation, weighted ROC-AUC, precision–recall metrics, and held-out calibration.
+7. Prediction is now validated with PSU-grouped nested cross-validation (see `SHAP_results.md`); still needed are external validation, repeated grouped CV, and recalibration if probabilities will be used.
 8. Report associations, not causal effects.
 
 ## Current conclusion
