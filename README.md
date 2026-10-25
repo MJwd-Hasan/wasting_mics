@@ -147,6 +147,16 @@ In Windows PowerShell, if R is not on PATH:
 & "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" analysis_followup.R MICS-child-ISRC.dta outputs
 ```
 
+## Python modelling dependency
+
+The updated `models.ipynb` includes CatBoost. Install it in the notebook's Python environment before running the modelling cells:
+
+```bash
+python -m pip install catboost
+```
+
+The notebook also requires the existing project dependencies (including scikit-learn, SHAP, XGBoost and LightGBM).
+
 ## Output files (tree-based models)
 
 | File | Content |
