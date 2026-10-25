@@ -1,6 +1,6 @@
 # Tree-Based Prediction and SHAP Results
 
-Results from [`models.ipynb`](models.ipynb): four tree-based classifiers with **default (untuned) settings**, 5-fold cross-validation, ROC AUC and ROC curves, reference checks, a fair nested-CV comparison with tuned models and logistic regression, then SHAP explanations. The outcome is `severe_wasting` (WHZ < -3; 2.47% of 22,311 children).
+Results from [`models.ipynb`](models.ipynb): five tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM and CatBoost) with **default (untuned) settings**, 5-fold cross-validation, ROC AUC and ROC curves, reference checks, a fair nested-CV comparison with tuned models and logistic regression, then SHAP explanations. The outcome is `severe_wasting` (WHZ < -3; 2.47% of 22,311 children).
 
 ## Bottom line
 
@@ -228,3 +228,12 @@ jupyter nbconvert --to notebook --execute models.ipynb
 ```
 
 Settings that control the load are at the top of the notebook: `N_JOBS = 2` (use 1 on a very slow machine), `N_SPLITS = 5` and `SHAP_N_PER_FOLD = 1000` (use 500 to halve the SHAP work). The raw-model part of the notebook (cross-validation, reference checks, SHAP) took about 4 minutes on one CPU core with 4 GB of RAM; the nested tuning and bootstrap section adds several more minutes because tuning is repeated inside every outer fold.
+
+
+## CatBoost extension — pending execution
+
+CatBoost is now included in `models.ipynb` in the raw PSU-grouped CV comparison and in the nested tuned model specifications. The tuned search includes iterations, depth, learning rate, L2 regularization, random strength, bagging temperature, border count and automatic class-weighting options. The raw-model out-of-fold SHAP selector includes all raw models, so CatBoost will receive held-out SHAP summaries and dependence plots if it is selected as the highest mean-CV-AUC model in Analysis A or B.
+
+**There are no new CatBoost results in this commit.** Existing tables and narrative in this document report the earlier models and are retained as historical baselines. In particular, the prior weighted pooled out-of-fold AUCs (about 0.58-0.59 for the stronger all-child models; 0.595 for tuned Random Forest in the under-2 analysis) do not include CatBoost. The notebook has not been run against the MICS data as part of this change, so do not infer a winner or claim improvement yet.
+
+After execution, update this file from the regenerated outputs. Compare CatBoost against the same outer folds and population-weighted metrics: weighted and unweighted ROC-AUC, PR-AUC against prevalence, Brier score, calibration intercept/slope, top-decile case capture, fold variability and PSU-cluster-bootstrap intervals. Review SHAP only as an explanation of model predictions; correlated predictors and weak discrimination can make importance rankings unstable, and SHAP does not establish causal effects. The current SHAP workflow explains the best **raw** model; it does not yet explain the best model selected by the nested tuned comparison.
