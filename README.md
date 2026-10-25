@@ -111,6 +111,10 @@ Section "Extended Exploratory Data Analysis" (right after data preparation) cove
 - Missingness is mostly structural: infant-only variables are about 60% missing overall but only 0-1% missing at ages 0-1 (meal frequency `bd9` is the exception at 27%).
 - Several categories are too small for stable estimates (`toilet_cat` 3: 12 cases; `fuel_cat` 4: 5; unmarried mothers: 9; `parity_cat` 0: 29 children, 0 cases, likely non-mother caretakers).
 
+## CatBoost update (code added; results pending)
+
+CatBoost has been added to both the raw PSU-grouped cross-validation models and the nested hyperparameter search in `models.ipynb`. The tuned search covers iterations, depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class weighting. The raw-model SHAP workflow will explain CatBoost if it is selected as the best model by mean grouped-CV ROC-AUC for either analysis. The repository edit has not run the notebook against the local MICS dataset, so there are **no measured CatBoost scores or SHAP rankings yet**. The existing result tables below describe earlier models and must not be presented as including CatBoost until the notebook is rerun and its output tables regenerated.
+
 ## Main gaps
 
 0. For prediction, even tuned tree models do not beat logistic regression (about 0.58-0.60 AUC). Repeat SHAP on the tuned Random Forest or XGBoost, recalibrate predicted probabilities if they will be used, use repeated grouped CV with more cases per fold for the under-2 analysis, and keep comparing with a simple age + sex logistic regression.
@@ -149,10 +153,10 @@ In Windows PowerShell, if R is not on PATH:
 |---|---|
 | `outputs/ml_cv_summary_*.csv`, `outputs/ml_cv_fold_metrics_*.csv` | Cross-validation results (A = `all_children`, B = `infants`) |
 | `outputs/ml_reference_logistic.csv`, `outputs/ml_permutation_check.csv` | Reference logistic regression and permutation test |
-| `outputs/ml_shap_importance_*.csv` | Mean absolute SHAP, share and direction per variable |
+| `outputs/ml_shap_importance_*.csv` | Mean absolute SHAP, share and direction per variable; CatBoost will appear if it is the selected best raw model after rerunning |
 | `outputs/fair_model_comparison_summary_*.csv` | Nested-CV metrics (weighted and unweighted) with calibration, for `all_children` and `under2` |
 | `outputs/fair_model_comparison_cluster_bootstrap_*.csv` | Weighted AUC with PSU cluster-bootstrap CIs and paired differences vs weighted logistic |
-| `outputs/fair_model_comparison_tuning_*.csv` | Hyperparameters selected in each outer fold |
+| `outputs/fair_model_comparison_tuning_*.csv` | Hyperparameters selected in each outer fold, including CatBoost after rerunning the notebook |
 | `outputs/fair_model_comparison_fold_metrics_*.csv`, `outputs/fair_model_comparison_oof_predictions_*.csv` | Fold-level metrics and out-of-fold predictions |
 | `figures/ml_*.png` | ROC/PR curves and SHAP plots |
 
