@@ -122,3 +122,16 @@ The core model is complete-case. Infant feeding variables have roughly 60% missi
 ## Current conclusion
 
 Child age and sex are the clearest provisional signals; the age association appears non-linear. The division joint test suggests geographic variation may be present. The current output does not provide clear overall evidence for wealth, education, maternal age, or toilet category, while individual category results should be treated cautiously. Validate the outputs against Stata before making final claims.
+
+
+## CatBoost model extension (code committed; results not yet computed)
+
+CatBoost has been added to `models.ipynb` in two places:
+
+- **Raw-model comparison:** CatBoostClassifier now joins Decision Tree, Random Forest, XGBoost and LightGBM in the existing stratified PSU-grouped 5-fold evaluation. This means its predictions are evaluated on held-out PSUs, with ROC-AUC, PR-AUC, Brier score, top-decile capture and training AUC recorded alongside fit time.
+- **Nested hyperparameter search:** CatBoost is now a candidate in the fair comparison with logistic regression and the other tuned trees. Its randomized search varies iterations, tree depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class weighting. Search stays inside each outer training fold; outer test PSUs are not used to choose settings.
+- **SHAP:** the existing out-of-fold TreeExplainer workflow automatically selects the highest mean-AUC raw model per analysis. If CatBoost wins, its held-out predictions will receive the same SHAP summary, feature ranking and dependence plots.
+
+**No CatBoost performance result is claimed yet.** The notebook has been edited and pushed, but it has not been executed against the local dataset in this work. Therefore the existing reported results—roughly 0.58-0.59 weighted out-of-fold AUC for the strongest all-child models and 0.595 for under-2 tuned Random Forest—remain the previous baseline, not a comparison that includes CatBoost. After running all notebook cells, regenerate the CSVs and figures, then update this section with CatBoost's weighted/unweighted ROC-AUC, PR-AUC relative to prevalence, Brier score, calibration, top-decile capture and PSU-bootstrap uncertainty. Only then decide whether it meaningfully improves on the weighted logistic benchmark or tuned Random Forest/XGBoost.
+
+CatBoost's SHAP rankings should be treated as predictive explanations, not causal effects. The current SHAP procedure explains the best **raw** model, not the best nested-tuned model; do not describe those plots as explanations of the tuned winner unless a separate out-of-fold SHAP workflow is added for the selected tuned estimator.
