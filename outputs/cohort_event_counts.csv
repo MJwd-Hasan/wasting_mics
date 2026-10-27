@@ -1,0 +1,4 @@
+cohort,children,cases,prevalence_unweighted_%,prevalence_weighted_%,PSUs,cases_per_outer_test_fold,cases_per_inner_validation_fold
+all,22311,552,2.47,2.52,3144,110.4,147.2
+0-1,8888,297,3.34,3.32,2930,59.4,79.2
+2-4,13423,255,1.9,1.98,3091,51.0,68.0

@@ -1,0 +1,43 @@
+variable,label,n_unique,missing_%,missing_%_ages_0_1,missing_%_ages_2_4,sparse_categories(n<50 or cases<10)
+hh1,Cluster number,3144,0.0,0.0,0.0,
+strata,Sampling stratum (area x division),16,0.0,0.0,0.0,
+chweight,Children under 5's sample weight,3093,0.0,0.0,0.0,
+severe_wasting,Severe wasting (WHO WHZ < -3),2,0.0,0.0,0.0,
+whz2,Weight for height z-score WHO,829,0.0,0.0,0.0,
+young,Child aged 0-1 (completed years),2,0.0,0.0,0.0,
+child_id,Unique child ID (cluster-household-line number),22311,0.0,0.0,0.0,
+hh_id,Unique household ID (cluster-household number),19343,0.0,0.0,0.0,
+mother_id,Unique mother/caretaker ID (cluster-household-mother line number),19970,0.0,0.0,0.0,
+ub2,Age of child in completed years,5,0.0,0.0,0.0,
+female,Child is female,2,0.0,0.0,0.0,
+urban,Area: urban,2,0.0,0.0,0.0,
+division,Division,8,0.0,0.0,0.0,
+wealth,"Wealth index quintile (ordered, 1-5)",5,0.0,0.0,0.0,
+edu_level,"Mother/caretaker education (ordered, 0-5)",6,1.18,0.39,1.7,
+wb4,Age of mother/caretaker,35,1.16,0.36,1.69,
+cm11,Total number of live births (children ever born),10,1.2,0.38,1.74,"0.0: n=29, cases=0; 6.0: n=174, cases=6; 7.0: n=50, cases=2; 8.0: n=26, cases=1; 9.0: n=6, cases=0"
+mother_married,Mother/caretaker currently married/in union,2,1.09,0.32,1.6,"0.0: n=232, cases=9"
+water_cat,Drinking water source (collapsed),4,0.0,0.0,0.0,
+toilet_cat,Toilet type (collapsed),4,0.0,0.0,0.0,
+fuel_cat,Cookstove fuel category,5,0.0,0.0,0.0,"4: n=347, cases=5"
+electricity,Household has electricity,2,0.0,0.0,0.0,
+insured,Household has health insurance,2,1.17,0.36,1.7,"1.0: n=168, cases=5"
+diarrhoea_2w,Child had diarrhoea in last 2 weeks,2,0.04,0.03,0.05,
+cough_2w,Child had cough in last 2 weeks,2,0.04,0.06,0.03,
+breathing_2w,Child had difficulty breathing in last 2 weeks,2,0.03,0.02,0.04,
+dds,"Dietary diversity score (food groups eaten yesterday, 0-7)",8,60.49,0.82,100.0,"6.0: n=304, cases=8; 7.0: n=70, cases=1"
+fg_grain,"Ate grains, roots or tubers yesterday (bd8b, bd8d)",2,60.19,0.07,100.0,
+fg_legume,Ate legumes or nuts yesterday (bd8n),2,60.18,0.03,100.0,
+fg_dairy,"Had dairy yesterday (bd7b, bd7c, bd7d, bd8a, bd8o)",2,60.26,0.25,100.0,
+fg_flesh,"Ate flesh foods yesterday (bd8i, bd8j, bd8k, bd8m)",2,60.23,0.16,100.0,
+fg_egg,Ate eggs yesterday (bd8l),2,60.21,0.12,100.0,
+fg_vita,"Ate vitamin A-rich fruit or vegetables yesterday (bd8c, bd8e, bd8g)",2,60.2,0.1,100.0,
+fg_ofv,"Ate other fruit or vegetables yesterday (bd8f, bd8h)",2,60.28,0.28,100.0,
+bf_status,Breastfeeding status (children aged 0-1 only),3,60.18,0.03,100.0,"0.0: n=188, cases=7"
+bottle,Fed with a bottle with nipple yesterday (children aged 0-1 only),2,60.17,0.02,100.0,
+anc_cat,ANC visits category (children aged 0-1 only),3,60.57,1.01,100.0,
+bd9,Times child ate solid/semi-solid food yesterday (7 = seven or more),7,70.74,26.55,100.0,
+age_m,,60,0.0,0.0,0.0,
+small_at_birth,,2,60.65,3.38,98.57,
+early_bf,,2,60.93,4.05,98.6,
+facility_delivery,,2,60.54,3.12,98.56,
