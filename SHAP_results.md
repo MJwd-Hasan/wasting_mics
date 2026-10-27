@@ -237,3 +237,14 @@ CatBoost is now included in `models.ipynb` in the raw PSU-grouped CV comparison 
 **There are no new CatBoost results in this commit.** Existing tables and narrative in this document report the earlier models and are retained as historical baselines. In particular, the prior weighted pooled out-of-fold AUCs (about 0.58-0.59 for the stronger all-child models; 0.595 for tuned Random Forest in the under-2 analysis) do not include CatBoost. The notebook has not been run against the MICS data as part of this change, so do not infer a winner or claim improvement yet.
 
 After execution, update this file from the regenerated outputs. Compare CatBoost against the same outer folds and population-weighted metrics: weighted and unweighted ROC-AUC, PR-AUC against prevalence, Brier score, calibration intercept/slope, top-decile case capture, fold variability and PSU-cluster-bootstrap intervals. Review SHAP only as an explanation of model predictions; correlated predictors and weak discrimination can make importance rankings unstable, and SHAP does not establish causal effects. The current SHAP workflow explains the best **raw** model; it does not yet explain the best model selected by the nested tuned comparison.
+
+
+## PCA-space SHAP results (`multicollinearity_pca.ipynb`)
+
+The executed PCA notebook also computes SHAP for Elastic Net, Random Forest, XGBoost and LightGBM fitted to PCA component scores. These are distinct from the original-variable SHAP results above: SHAP attributes predictions to principal components, each of which is a weighted combination of encoded predictors.
+
+- **All children (0-4):** PC7 and PC5/PC8 were among the most important components for the tree models. The largest loadings for these components include age-related categories (`ub2`/ `wb4`) and geography/household indicators (division, toilet and fuel categories).
+- **Children under 2:** PC1 (with strong loadings from food variety and food-group indicators), PC3 (ANC-category indicators), and PC9 (geographic/household indicators) appeared among the important components, with the ordering varying by model.
+- The PCA evaluation retained 80% of encoded predictor variance using 18 components for all children and 24 for under-2 children. Mean weighted ROC-AUC was 0.519-0.548 for all children and 0.540-0.561 for under-2 children, so predictive discrimination remained weak.
+
+These component-level SHAP rankings are **not direct effects or original-feature SHAP rankings**. Use the loading tables only to understand which encoded variables contribute to a component; do not interpret them causally. The PCA evaluation did not produce a CatBoost result because no selected CatBoost configuration was available to that run.
