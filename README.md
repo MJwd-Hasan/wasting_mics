@@ -97,6 +97,40 @@ Every model uses the same children, outer folds and preprocessing; tree hyperpar
 - **Still modest, and over-confident:** AUC is at most about 0.60; PR AUC is about 0.035 (prevalence 0.025) in A and 0.046 (0.033) in B; the top 10% of predicted risk holds up to about 19% of cases in A (best models) and 15-16% in B (tree models); Brier is no better than the baseline. Calibration slopes are 0.3-0.8 for all complex models (age + sex: 0.93), so their probabilities need recalibration.
 - **Caution:** the Python weighted fit gives no design-based standard errors, the tuning budget is small, and SHAP was computed on the raw models, not the tuned ones. No causal claims.
 
+## Multicollinearity and PCA (`multicollinearity_pca.ipynb`)
+
+The locally executed notebook now includes pairwise overlap, VIF diagnostics, PCA variance summaries, cross-validated prediction using PCA scores, and SHAP explanations in component space.
+
+### Multicollinearity diagnostics
+
+- The analysis loaded 22,311 children and identified 552 severe-wasting cases in the all-child sample; the under-2 sample contained 8,888 children and 297 cases.
+- The notebook could match only **7 core predictors** for all children and **17 predictors** for under-2 from the names currently available in the dataset. Many planned candidates were not found. These results therefore describe the predictors actually detected by the notebook, not the full intended predictor inventory.
+- The VIF design matrix was poorly conditioned and rank-deficient. Several district indicators have extremely large VIFs, and district (`hh7a`) is almost deterministically associated with division. Treat the numeric VIF values as unstable; the robust takeaway is redundant geographic encoding. Consider using either district or division (or a carefully defined geographic hierarchy), and inspect dummy coding before using VIF to drop individual predictors.
+- PCA retained at least 80% of encoded predictor variance with **18 components from 94 encoded columns** for all children and **24 components from 114 encoded columns** for children under 2. The first component explained 22.2% and 18.1%, respectively; the first five explained 46.8% and 45.1%.
+
+### Prediction using PCA scores
+
+The notebook used the selected FS1 configurations saved in `outputs/tuning_results.csv`, with PCA fitted inside each training fold. Metrics below are means across five PSU-grouped folds, not pooled out-of-fold metrics, so they should not be compared as if identical to the nested-CV results above.
+
+| Cohort | Model | Mean weighted ROC-AUC (SD) | Mean weighted PR-AUC | Mean Brier score |
+|---|---|---:|---:|---:|
+| All children 0-4 | LightGBM | **0.548 (0.019)** | 0.036 | 0.02455 |
+| All children 0-4 | XGBoost | 0.546 (0.022) | 0.032 | 0.02454 |
+| All children 0-4 | Random Forest | 0.525 (0.029) | 0.030 | 0.02455 |
+| All children 0-4 | Elastic Net | 0.519 (0.026) | 0.031 | 0.02454 |
+| Children 0-1 | Elastic Net | **0.561 (0.047)** | 0.048 | 0.03210 |
+| Children 0-1 | XGBoost | 0.560 (0.046) | 0.043 | 0.03206 |
+| Children 0-1 | LightGBM | 0.560 (0.046) | 0.045 | 0.03207 |
+| Children 0-1 | Random Forest | 0.540 (0.037) | 0.039 | 0.03208 |
+
+CatBoost was not present in the selected configurations returned to this PCA evaluation, so no PCA-CatBoost score is reported. These PCA results show **weak discrimination**, with mean AUCs around 0.52-0.55 for all children and 0.54-0.56 for children under 2. No model reaches strong individual-level prediction, and differences among the top under-2 models are very small relative to fold-to-fold variation.
+
+### SHAP on principal components
+
+SHAP was run for the fitted PCA models. In the all-child tree models, components around PC7 and PC5/PC8 ranked highly; their largest loadings include child-age-related encoded categories (`ub2`/ `wb4`) and geographic/household categories such as division, toilet and fuel. For the under-2 models, PC1 (strong loadings from food variety and food-group indicators), PC3 (ANC-category loadings), and PC9 (geographic/household loadings) were prominent for different models.
+
+**Interpretation caution:** SHAP values describe the model's use of principal components, not the direct effect of a named original predictor. Loading tables show which encoded variables contribute strongly to a component, but this is not equivalent to original-variable SHAP or a causal effect. Component rankings also differ by model and cohort.
+
 ## Interpretable neural networks (`nn.ipynb`)
 
 Two PyTorch Neural Additive Models (NAMs) were added using exactly the same predictors as `models.ipynb`: one for all children aged 0-4 and one for ages 0-1/under 2. The additive architecture makes each original variable's logit contribution directly inspectable while still allowing nonlinear continuous effects. Evaluation again uses PSU-grouped stratified 5-fold cross-validation.
