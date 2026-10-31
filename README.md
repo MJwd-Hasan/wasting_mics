@@ -97,8 +97,8 @@ The following variables are calculated in the notebook from the original columns
 | `mother_married_missing` | Indicator that mother/caretaker marital status is missing |
 | `u5_in_household` | Number of under-five children in the household |
 | `u5_per_mother` | Number of under-five children linked to the same mother/caretaker |
-| `improved_toilet` | Indicator based on the notebook's configured improved-toilet categories |
-| `improved_water` | Indicator based on the notebook's configured improved-water categories |
+The notebook also creates `improved_toilet` and `improved_water` as intermediate components when calculating `wash_score`; these two intermediate columns are **not** passed directly to the models.
+
 | `wash_score` | Sum of the improved-toilet and improved-water indicators |
 | `asset_score` | Sum of household electricity, health-insurance and urban indicators |
 | `wealth_x_urban` | Wealth quintile multiplied by urban/rural residence |
