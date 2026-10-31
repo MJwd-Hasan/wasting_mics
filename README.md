@@ -70,8 +70,8 @@ Four untuned tree models (Decision Tree, Random Forest, XGBoost, LightGBM) were 
 
 | Analysis | Best model | Mean ROC AUC (5 folds) | Other models |
 |---|---|---|---|
-| A: all children, 0-4 (22,311; 552 cases) | LightGBM | **0.542** | Random Forest 0.534, XGBoost 0.526, Decision Tree 0.503 |
-| B: ages 0-1 with feeding and ANC variables (8,888; 297 cases) | XGBoost | **0.552** | Random Forest 0.545, LightGBM 0.544, Decision Tree 0.500 |
+| A: all children, 0-4 (22,311; 552 cases) | LightGBM | **0.542** | Random Forest 0.534, XGBoost 0.526, Decision Tree 0.503; CatBoost: pending run |
+| B: ages 0-1 with feeding and ANC variables (8,888; 297 cases) | XGBoost | **0.552** | Random Forest 0.545, LightGBM 0.544, Decision Tree 0.500; CatBoost: pending run |
 
 - **Weak prediction:** AUC is only slightly above chance (permutation p = 0.020 and 0.039). The top 10% highest-risk children contain 14-15% of cases (10% by chance). Training AUC is 0.97-1.00, so the raw ensembles overfit.
 - **SHAP (out of fold, best raw model):** child age is the top predictor in Analysis A (17% of importance), followed by mother's age, wealth, division, number of births and sex. In Analysis B the diet variables (`dds` and food groups) carry about 27% of the SHAP importance, with `dds`, `fg_flesh` and ANC all lowering predicted risk when higher.
@@ -90,6 +90,7 @@ Every model uses the same children, outer folds and preprocessing; tree hyperpar
 | XGBoost (tuned) | 0.585 (0.557-0.614) | 0.589 (0.555-0.628) |
 | LightGBM (tuned) | 0.560 (0.532-0.588) | 0.573 (0.541-0.613) |
 | Decision Tree (tuned) | 0.555 (0.526-0.584) | 0.546 (0.506-0.584) |
+| CatBoost (tuned) | **Pending execution** | **Pending execution** |
 | Prevalence baseline | 0.485 | 0.488 |
 
 - **No clear winner for all children.** The logistic models, tuned Random Forest and tuned XGBoost are statistically indistinguishable (differences vs the weighted logistic are within about ±0.03, and all intervals include 0), and age + sex alone is as good (0.587). The extra predictors and tree ensembles add no measurable discrimination.
@@ -120,7 +121,7 @@ CatBoost is included in the modelling workflow in [`models_m.ipynb`](models_m.ip
 - **Nested tuning:** CatBoost is a candidate in the same outer PSU-grouped folds used for the other models. Hyperparameter search is confined to each outer training fold and uses inner 3-fold PSU-grouped cross-validation. The randomized search explores 30 configurations per model per outer fold, varying iterations, depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class-weighting options.
 - **SHAP:** the raw-model SHAP workflow includes CatBoost and explains its out-of-fold predictions if CatBoost is selected as the highest mean-CV-AUC raw model for an analysis. This is not an explanation of the nested-CV tuned winner.
 
-**Results status: pending execution.** The notebook code includes CatBoost, but the CatBoost-inclusive workflow has not yet been run against the local MICS dataset and regenerated outputs are not committed. Therefore, this README does not report a CatBoost AUC, PR-AUC, calibration result, winning status or SHAP ranking. Existing model scores elsewhere in this README are historical baselines from earlier runs and must not be interpreted as results from a CatBoost-inclusive run. After executing the notebook, compare CatBoost with the weighted logistic benchmark and tuned Random Forest/XGBoost on identical outer folds, including weighted and unweighted discrimination, calibration, top-decile capture and PSU-cluster-bootstrap uncertainty.
+**Results status: pending execution.** CatBoost is now explicitly listed in the model comparison tables above, but its cells are marked pending because the CatBoost-inclusive workflow has not yet been run against the local MICS dataset and regenerated outputs are not committed. No CatBoost AUC, PR-AUC, calibration result, winning status or SHAP ranking is available yet. Existing model scores elsewhere in this README are historical baselines from earlier runs and must not be interpreted as results from a CatBoost-inclusive run. After executing the notebook, compare CatBoost with the weighted logistic benchmark and tuned Random Forest/XGBoost on identical outer folds, including weighted and unweighted discrimination, calibration, top-decile capture and PSU-cluster-bootstrap uncertainty.
 ## Main gaps
 
 0. For prediction, even tuned tree models do not beat logistic regression (about 0.58-0.60 AUC). Repeat SHAP on the tuned Random Forest or XGBoost, recalibrate predicted probabilities if they will be used, use repeated grouped CV with more cases per fold for the under-2 analysis, and keep comparing with a simple age + sex logistic regression.
