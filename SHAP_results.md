@@ -1,6 +1,6 @@
 # Tree-Based Prediction and SHAP Results
 
-Results from [`models.ipynb`](models.ipynb): five tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM and CatBoost) with **default (untuned) settings**, 5-fold cross-validation, ROC AUC and ROC curves, reference checks, a fair nested-CV comparison with tuned models and logistic regression, then SHAP explanations. The outcome is `severe_wasting` (WHZ < -3; 2.47% of 22,311 children).
+Results from [`models_m.ipynb`](models_m.ipynb): five tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM and CatBoost) with **default (untuned) settings**, 5-fold cross-validation, ROC AUC and ROC curves, reference checks, a fair nested-CV comparison with tuned models and logistic regression, then SHAP explanations. The outcome is `severe_wasting` (WHZ < -3; 2.47% of 22,311 children).
 
 ## Bottom line
 
@@ -86,7 +86,7 @@ In Analysis A the best model beats all 50 shuffled runs (largest chance AUC 0.53
 
 ## Fair comparison: tuned models vs logistic regression (nested cross-validation)
 
-The raw-model results above compare untuned trees fitted on the raw columns. A second, like-for-like comparison was added to `models.ipynb`: every model uses the same children, the same outer PSU-grouped folds, and identical preprocessing (imputation and one-hot encoding inside each training fold). Compared are logistic regression with age and sex only, full unweighted logistic regression, full survey-weighted logistic regression (the reference), a more strongly regularised weighted logistic regression, and **tuned** Decision Tree, Random Forest, XGBoost and LightGBM. Tree hyperparameters are tuned only inside each outer training fold (3-fold PSU-grouped inner CV, small random search), so the outer test fold is never used for tuning. Weighted models use `chweight` as a predictive sample weight; this is not design-based inference. Confidence intervals come from a cluster bootstrap that resamples whole PSUs (300 resamples). Weighted metrics are primary because the target is the population; the calibration slope should be near 1 (below 1 means over-confident predictions). The Brier score is about 0.0245 (A) and 0.032 (B) for every model including the no-skill baseline, so it is not shown.
+The raw-model results above compare untuned trees fitted on the raw columns. A second, like-for-like comparison was added to `models_m.ipynb`: every model uses the same children, the same outer PSU-grouped folds, and identical preprocessing (imputation and one-hot encoding inside each training fold). Compared are logistic regression with age and sex only, full unweighted logistic regression, full survey-weighted logistic regression (the reference), a more strongly regularised weighted logistic regression, and **tuned** Decision Tree, Random Forest, XGBoost and LightGBM. Tree hyperparameters are tuned only inside each outer training fold (3-fold PSU-grouped inner CV, small random search), so the outer test fold is never used for tuning. Weighted models use `chweight` as a predictive sample weight; this is not design-based inference. Confidence intervals come from a cluster bootstrap that resamples whole PSUs (300 resamples). Weighted metrics are primary because the target is the population; the calibration slope should be near 1 (below 1 means over-confident predictions). The Brier score is about 0.0245 (A) and 0.032 (B) for every model including the no-skill baseline, so it is not shown.
 
 ### Analysis A: all children aged 0-4
 
@@ -210,7 +210,7 @@ SHAP importance by variable group (Analysis B):
 
 | File | Content |
 |---|---|
-| [`models.ipynb`](models.ipynb) | The executed notebook: setup, cross-validation, ROC curves, reference checks, SHAP |
+| [`models_m.ipynb`](models_m.ipynb) | The executed notebook: setup, cross-validation, ROC curves, reference checks, SHAP |
 | `outputs/ml_cv_summary_*.csv`, `outputs/ml_cv_fold_metrics_*.csv` | Cross-validation summary and per-fold metrics for Analysis A (`all_children`) and B (`infants`) |
 | `outputs/ml_reference_logistic.csv`, `outputs/ml_permutation_check.csv` | Reference logistic regression and permutation test |
 | `outputs/fair_model_comparison_summary_*.csv` | Nested-CV pooled and fold-level metrics, weighted and unweighted, with calibration (`all_children`, `under2`) |
@@ -224,7 +224,7 @@ SHAP importance by variable group (Analysis B):
 
 ```bash
 pip install pandas numpy scikit-learn xgboost lightgbm shap matplotlib scipy
-jupyter nbconvert --to notebook --execute models.ipynb
+jupyter nbconvert --to notebook --execute models_m.ipynb
 ```
 
 Settings that control the load are at the top of the notebook: `N_JOBS = 2` (use 1 on a very slow machine), `N_SPLITS = 5` and `SHAP_N_PER_FOLD = 1000` (use 500 to halve the SHAP work). The raw-model part of the notebook (cross-validation, reference checks, SHAP) took about 4 minutes on one CPU core with 4 GB of RAM; the nested tuning and bootstrap section adds several more minutes because tuning is repeated inside every outer fold.
@@ -232,19 +232,8 @@ Settings that control the load are at the top of the notebook: `N_JOBS = 2` (use
 
 ## CatBoost extension — pending execution
 
-CatBoost is now included in `models.ipynb` in the raw PSU-grouped CV comparison and in the nested tuned model specifications. The tuned search includes iterations, depth, learning rate, L2 regularization, random strength, bagging temperature, border count and automatic class-weighting options. The raw-model out-of-fold SHAP selector includes all raw models, so CatBoost will receive held-out SHAP summaries and dependence plots if it is selected as the highest mean-CV-AUC model in Analysis A or B.
+CatBoost is now included in `models_m.ipynb` in the raw PSU-grouped CV comparison and in the nested tuned model specifications. The tuned search includes iterations, depth, learning rate, L2 regularization, random strength, bagging temperature, border count and automatic class-weighting options. The raw-model out-of-fold SHAP selector includes all raw models, so CatBoost will receive held-out SHAP summaries and dependence plots if it is selected as the highest mean-CV-AUC model in Analysis A or B.
 
 **There are no new CatBoost results in this commit.** Existing tables and narrative in this document report the earlier models and are retained as historical baselines. In particular, the prior weighted pooled out-of-fold AUCs (about 0.58-0.59 for the stronger all-child models; 0.595 for tuned Random Forest in the under-2 analysis) do not include CatBoost. The notebook has not been run against the MICS data as part of this change, so do not infer a winner or claim improvement yet.
 
 After execution, update this file from the regenerated outputs. Compare CatBoost against the same outer folds and population-weighted metrics: weighted and unweighted ROC-AUC, PR-AUC against prevalence, Brier score, calibration intercept/slope, top-decile case capture, fold variability and PSU-cluster-bootstrap intervals. Review SHAP only as an explanation of model predictions; correlated predictors and weak discrimination can make importance rankings unstable, and SHAP does not establish causal effects. The current SHAP workflow explains the best **raw** model; it does not yet explain the best model selected by the nested tuned comparison.
-
-
-## PCA-space SHAP results (`multicollinearity_pca.ipynb`)
-
-The executed PCA notebook also computes SHAP for Elastic Net, Random Forest, XGBoost and LightGBM fitted to PCA component scores. These are distinct from the original-variable SHAP results above: SHAP attributes predictions to principal components, each of which is a weighted combination of encoded predictors.
-
-- **All children (0-4):** PC7 and PC5/PC8 were among the most important components for the tree models. The largest loadings for these components include age-related categories (`ub2`/ `wb4`) and geography/household indicators (division, toilet and fuel categories).
-- **Children under 2:** PC1 (with strong loadings from food variety and food-group indicators), PC3 (ANC-category indicators), and PC9 (geographic/household indicators) appeared among the important components, with the ordering varying by model.
-- The PCA evaluation retained 80% of encoded predictor variance using 18 components for all children and 24 for under-2 children. Mean weighted ROC-AUC was 0.519-0.548 for all children and 0.540-0.561 for under-2 children, so predictive discrimination remained weak.
-
-These component-level SHAP rankings are **not direct effects or original-feature SHAP rankings**. Use the loading tables only to understand which encoded variables contribute to a component; do not interpret them causally. The PCA evaluation did not produce a CatBoost result because no selected CatBoost configuration was available to that run.
