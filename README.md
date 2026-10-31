@@ -10,9 +10,10 @@ This project explores child, maternal, and household factors associated with **s
 - [Follow-up results, interpretation, and gaps](FOLLOWUP_ANALYSIS.md): readable summary of current outputs.
 - [R follow-up script](analysis_followup.R): survey models, infant-subpopulation models, tests, diagnostics.
 - [Main exploratory notebook](eda.ipynb): data prep, **extended EDA (sections 1-12)**, univariate and multivariable tests.
-- [Tree-based prediction notebook](models.ipynb): untuned Decision Tree, Random Forest, XGBoost and LightGBM with cross-validation, ROC curves and SHAP, plus a fair nested-CV comparison with tuned models and logistic regression.\n- [Interpretable neural-network notebook](nn.ipynb) and [results](nn.md): two PyTorch Neural Additive Models for ages 0-4 and 0-1 using the same predictor sets as `models.ipynb`.
-- [SHAP and prediction results](SHAP_results.md): tables, figures and interpretation from `models.ipynb`.
-- [Earlier modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP (superseded by `models.ipynb`).
+- [Tree-based prediction notebook](models_m.ipynb): untuned Decision Tree, Random Forest, XGBoost and LightGBM with cross-validation, ROC curves and SHAP, plus a fair nested-CV comparison with tuned models and logistic regression.
+- [Interpretable neural-network notebook](nn.ipynb) and [results](nn.md): two PyTorch Neural Additive Models for ages 0-4 and 0-1 using the same predictor sets as `models_m.ipynb`.
+- [SHAP and prediction results](SHAP_results.md): tables, figures and interpretation from `models_m.ipynb`.
+- [Earlier modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP (superseded by `models_m.ipynb`).
 - [`outputs/`](outputs): CSV tables written by `analysis_followup.R`.
 
 ## Research question and data
@@ -59,7 +60,7 @@ How to read this:
 
 The weighted in-sample Brier score of the core survey model (0.02436) is nearly the same as a no-skill model that predicts the average prevalence (0.02453). The tree-based experiments below confirm that prediction is weak. The 0.635 in-sample AUC in `eda.ipynb` was optimistic: the full survey-weighted logistic regression scores 0.580 out of fold.
 
-## Tree-based prediction and SHAP (`models.ipynb`)
+## Tree-based prediction and SHAP (`models_m.ipynb`)
 
 Full tables, figures and caveats are in [SHAP_results.md](SHAP_results.md).
 
@@ -97,43 +98,9 @@ Every model uses the same children, outer folds and preprocessing; tree hyperpar
 - **Still modest, and over-confident:** AUC is at most about 0.60; PR AUC is about 0.035 (prevalence 0.025) in A and 0.046 (0.033) in B; the top 10% of predicted risk holds up to about 19% of cases in A (best models) and 15-16% in B (tree models); Brier is no better than the baseline. Calibration slopes are 0.3-0.8 for all complex models (age + sex: 0.93), so their probabilities need recalibration.
 - **Caution:** the Python weighted fit gives no design-based standard errors, the tuning budget is small, and SHAP was computed on the raw models, not the tuned ones. No causal claims.
 
-## Multicollinearity and PCA (`multicollinearity_pca.ipynb`)
-
-The locally executed notebook now includes pairwise overlap, VIF diagnostics, PCA variance summaries, cross-validated prediction using PCA scores, and SHAP explanations in component space.
-
-### Multicollinearity diagnostics
-
-- The analysis loaded 22,311 children and identified 552 severe-wasting cases in the all-child sample; the under-2 sample contained 8,888 children and 297 cases.
-- The notebook could match only **7 core predictors** for all children and **17 predictors** for under-2 from the names currently available in the dataset. Many planned candidates were not found. These results therefore describe the predictors actually detected by the notebook, not the full intended predictor inventory.
-- The VIF design matrix was poorly conditioned and rank-deficient. Several district indicators have extremely large VIFs, and district (`hh7a`) is almost deterministically associated with division. Treat the numeric VIF values as unstable; the robust takeaway is redundant geographic encoding. Consider using either district or division (or a carefully defined geographic hierarchy), and inspect dummy coding before using VIF to drop individual predictors.
-- PCA retained at least 80% of encoded predictor variance with **18 components from 94 encoded columns** for all children and **24 components from 114 encoded columns** for children under 2. The first component explained 22.2% and 18.1%, respectively; the first five explained 46.8% and 45.1%.
-
-### Prediction using PCA scores
-
-The notebook used the selected FS1 configurations saved in `outputs/tuning_results.csv`, with PCA fitted inside each training fold. Metrics below are means across five PSU-grouped folds, not pooled out-of-fold metrics, so they should not be compared as if identical to the nested-CV results above.
-
-| Cohort | Model | Mean weighted ROC-AUC (SD) | Mean weighted PR-AUC | Mean Brier score |
-|---|---|---:|---:|---:|
-| All children 0-4 | LightGBM | **0.548 (0.019)** | 0.036 | 0.02455 |
-| All children 0-4 | XGBoost | 0.546 (0.022) | 0.032 | 0.02454 |
-| All children 0-4 | Random Forest | 0.525 (0.029) | 0.030 | 0.02455 |
-| All children 0-4 | Elastic Net | 0.519 (0.026) | 0.031 | 0.02454 |
-| Children 0-1 | Elastic Net | **0.561 (0.047)** | 0.048 | 0.03210 |
-| Children 0-1 | XGBoost | 0.560 (0.046) | 0.043 | 0.03206 |
-| Children 0-1 | LightGBM | 0.560 (0.046) | 0.045 | 0.03207 |
-| Children 0-1 | Random Forest | 0.540 (0.037) | 0.039 | 0.03208 |
-
-CatBoost was not present in the selected configurations returned to this PCA evaluation, so no PCA-CatBoost score is reported. These PCA results show **weak discrimination**, with mean AUCs around 0.52-0.55 for all children and 0.54-0.56 for children under 2. No model reaches strong individual-level prediction, and differences among the top under-2 models are very small relative to fold-to-fold variation.
-
-### SHAP on principal components
-
-SHAP was run for the fitted PCA models. In the all-child tree models, components around PC7 and PC5/PC8 ranked highly; their largest loadings include child-age-related encoded categories (`ub2`/ `wb4`) and geographic/household categories such as division, toilet and fuel. For the under-2 models, PC1 (strong loadings from food variety and food-group indicators), PC3 (ANC-category loadings), and PC9 (geographic/household loadings) were prominent for different models.
-
-**Interpretation caution:** SHAP values describe the model's use of principal components, not the direct effect of a named original predictor. Loading tables show which encoded variables contribute strongly to a component, but this is not equivalent to original-variable SHAP or a causal effect. Component rankings also differ by model and cohort.
-
 ## Interpretable neural networks (`nn.ipynb`)
 
-Two PyTorch Neural Additive Models (NAMs) were added using exactly the same predictors as `models.ipynb`: one for all children aged 0-4 and one for ages 0-1/under 2. The additive architecture makes each original variable's logit contribution directly inspectable while still allowing nonlinear continuous effects. Evaluation again uses PSU-grouped stratified 5-fold cross-validation.
+Two PyTorch Neural Additive Models (NAMs) were added using exactly the same predictors as `models_m.ipynb`: one for all children aged 0-4 and one for ages 0-1/under 2. The additive architecture makes each original variable's logit contribution directly inspectable while still allowing nonlinear continuous effects. Evaluation again uses PSU-grouped stratified 5-fold cross-validation.
 
 The result is a useful negative finding: weighted out-of-fold ROC AUC is **0.492** for all children and **0.522** for ages 0-1. This is worse than the logistic/tuned-tree comparison already in the project (about 0.58-0.60). Feature-contribution rankings are therefore treated as unstable model descriptions, not new epidemiologic evidence. See [nn.md](nn.md) for interpretation and limitations.
 
@@ -145,10 +112,15 @@ Section "Extended Exploratory Data Analysis" (right after data preparation) cove
 - Missingness is mostly structural: infant-only variables are about 60% missing overall but only 0-1% missing at ages 0-1 (meal frequency `bd9` is the exception at 27%).
 - Several categories are too small for stable estimates (`toilet_cat` 3: 12 cases; `fuel_cat` 4: 5; unmarried mothers: 9; `parity_cat` 0: 29 children, 0 cases, likely non-mother caretakers).
 
-## CatBoost update (code added; results pending)
+## CatBoost model extension
 
-CatBoost has been added to both the raw PSU-grouped cross-validation models and the nested hyperparameter search in `models.ipynb`. The tuned search covers iterations, depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class weighting. The raw-model SHAP workflow will explain CatBoost if it is selected as the best model by mean grouped-CV ROC-AUC for either analysis. The repository edit has not run the notebook against the local MICS dataset, so there are **no measured CatBoost scores or SHAP rankings yet**. The existing result tables below describe earlier models and must not be presented as including CatBoost until the notebook is rerun and its output tables regenerated.
+CatBoost is included in the modelling workflow in [`models_m.ipynb`](models_m.ipynb) in both the raw-model comparison and the fair nested-CV comparison.
 
+- **Raw comparison:** `CatBoostClassifier` is evaluated alongside Decision Tree, Random Forest, XGBoost and LightGBM using stratified 5-fold cross-validation grouped by PSU. The held-out-fold metrics include ROC-AUC, PR-AUC, Brier score, top-decile case capture and training AUC.
+- **Nested tuning:** CatBoost is a candidate in the same outer PSU-grouped folds used for the other models. Hyperparameter search is confined to each outer training fold and uses inner 3-fold PSU-grouped cross-validation. The randomized search explores 30 configurations per model per outer fold, varying iterations, depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class-weighting options.
+- **SHAP:** the raw-model SHAP workflow includes CatBoost and explains its out-of-fold predictions if CatBoost is selected as the highest mean-CV-AUC raw model for an analysis. This is not an explanation of the nested-CV tuned winner.
+
+**Results status: pending execution.** The notebook code includes CatBoost, but the CatBoost-inclusive workflow has not yet been run against the local MICS dataset and regenerated outputs are not committed. Therefore, this README does not report a CatBoost AUC, PR-AUC, calibration result, winning status or SHAP ranking. Existing model scores elsewhere in this README are historical baselines from earlier runs and must not be interpreted as results from a CatBoost-inclusive run. After executing the notebook, compare CatBoost with the weighted logistic benchmark and tuned Random Forest/XGBoost on identical outer folds, including weighted and unweighted discrimination, calibration, top-decile capture and PSU-cluster-bootstrap uncertainty.
 ## Main gaps
 
 0. For prediction, even tuned tree models do not beat logistic regression (about 0.58-0.60 AUC). Repeat SHAP on the tuned Random Forest or XGBoost, recalibrate predicted probabilities if they will be used, use repeated grouped CV with more cases per fold for the under-2 analysis, and keep comparing with a simple age + sex logistic regression.
@@ -183,7 +155,7 @@ In Windows PowerShell, if R is not on PATH:
 
 ## Python modelling dependency
 
-The updated `models.ipynb` includes CatBoost. Install it in the notebook's Python environment before running the modelling cells:
+The `models_m.ipynb` notebook includes CatBoost. Install it in the notebook's Python environment before running the modelling cells:
 
 ```bash
 python -m pip install catboost
