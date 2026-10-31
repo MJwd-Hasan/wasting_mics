@@ -16,6 +16,149 @@ This project explores child, maternal, and household factors associated with **s
 - [Earlier modelling notebook](analysis.ipynb): preliminary GLM, random forest, SHAP (superseded by `models_m.ipynb`).
 - [`outputs/`](outputs): CSV tables written by `analysis_followup.R`.
 
+## Variables used by the predictive models (`models_m.ipynb`)
+
+The modelling notebook uses **`severe_wasting`** as its binary outcome (severe wasting: WHO weight-for-height z-score, WHZ, below -3). The predictor columns differ by cohort and feature set. The tables below give the exact notebook column names alongside readable labels so that the analysis is reproducible and the variables are identifiable without opening the Stata file.
+
+### Cohorts and feature sets
+
+| Cohort | Definition | FS0: original predictors | FS1: engineered predictors | FS2: extended predictors |
+|---|---|---:|---:|---:|
+| All children | Ages 0-4 years | 17 | 32 | 34 |
+| Under 2 | Completed age 0-1 years | 28 | 52 | 57 |
+| Ages 2-4 | Completed age 2-4 years | 17 | 32 | Not run |
+
+- **FS0 (original):** original predictor columns, with nominal variables one-hot encoded and child age treated categorically.
+- **FS1 (engineered):** FS0 plus derived illness, household, WASH, asset, interaction and infant-feeding features.
+- **FS2 (extended, post hoc):** FS1 plus child age in months and an under-six-month indicator; for the under-2 cohort it also adds birth-size, early-breastfeeding and delivery-location indicators. These variables were added from the revised dataset after earlier exploration, so FS2 should be interpreted as post hoc rather than a pre-specified primary feature set.
+- FS2 is run only when the revised data file is available and its shared rows/columns match the main file. The current run manifest records that the revised file was available. The ages 2-4 FS2 feature list is defined in code but is not included in the experiment plan.
+
+### Outcome
+
+| Notebook name | Label / definition | Role |
+|---|---|---|
+| `severe_wasting` | Severe wasting (WHO WHZ < -3) | **Prediction target**; not a predictor |
+
+### Original predictors: all-child cohort (FS0)
+
+These 17 variables are used for the all-child and ages 2-4 cohorts.
+
+| Notebook name | Label / meaning |
+|---|---|
+| `ub2` | Age of child in completed years (categorical in the model) |
+| `female` | Child is female |
+| `urban` | Area: urban |
+| `division` | Division |
+| `wealth` | Wealth index quintile (ordered, 1-5) |
+| `edu_level` | Mother/caretaker education (ordered, 0-5) |
+| `wb4` | Age of mother/caretaker |
+| `cm11` | Total number of live births (children ever born) |
+| `mother_married` | Mother/caretaker currently married/in union |
+| `water_cat` | Drinking water source (collapsed) |
+| `toilet_cat` | Toilet type (collapsed) |
+| `fuel_cat` | Cookstove fuel category |
+| `electricity` | Household has electricity |
+| `insured` | Household has health insurance |
+| `diarrhoea_2w` | Child had diarrhoea in last 2 weeks |
+| `cough_2w` | Child had cough in last 2 weeks |
+| `breathing_2w` | Child had difficulty breathing in last 2 weeks |
+
+### Additional original predictors: under-2 cohort only (FS0)
+
+These 11 variables are available for children aged 0-1 years and are **not** supplied to the all-child or ages 2-4 models.
+
+| Notebook name | Label / meaning |
+|---|---|
+| `dds` | Dietary diversity score (food groups eaten yesterday, 0-7) |
+| `fg_grain` | Ate grains, roots or tubers yesterday |
+| `fg_legume` | Ate legumes or nuts yesterday |
+| `fg_dairy` | Had dairy yesterday |
+| `fg_flesh` | Ate flesh foods yesterday |
+| `fg_egg` | Ate eggs yesterday |
+| `fg_vita` | Ate vitamin A-rich fruit or vegetables yesterday |
+| `fg_ofv` | Ate other fruit or vegetables yesterday |
+| `bf_status` | Breastfeeding status (children aged 0-1 only) |
+| `bottle` | Fed with a bottle with nipple yesterday (children aged 0-1 only) |
+| `anc_cat` | ANC visits category (children aged 0-1 only) |
+
+The infant food-group indicators describe whether the child consumed each food group on the previous day. `dds` is the total dietary-diversity score; it is distinct from the individual food-group indicators.
+
+### Engineered predictors added in FS1
+
+The following variables are calculated in the notebook from the original columns. They are not separate raw survey questions.
+
+| Notebook name | Label / construction |
+|---|---|
+| `illness_count` | Count of reported recent illness indicators: diarrhoea, cough and breathing difficulty |
+| `maternal_age_at_birth_est` | Approximate maternal age when the child was born: `wb4 - ub2` |
+| `wb4_missing` | Indicator that mother/caretaker age is missing |
+| `cm11_missing` | Indicator that total live births is missing |
+| `edu_level_missing` | Indicator that mother/caretaker education is missing |
+| `mother_married_missing` | Indicator that mother/caretaker marital status is missing |
+| `u5_in_household` | Number of under-five children in the household |
+| `u5_per_mother` | Number of under-five children linked to the same mother/caretaker |
+| `improved_toilet` | Indicator based on the notebook's configured improved-toilet categories |
+| `improved_water` | Indicator based on the notebook's configured improved-water categories |
+| `wash_score` | Sum of the improved-toilet and improved-water indicators |
+| `asset_score` | Sum of household electricity, health-insurance and urban indicators |
+| `wealth_x_urban` | Wealth quintile multiplied by urban/rural residence |
+| `edu_x_wealth` | Education level multiplied by wealth quintile |
+| `age_x_female` | Child age in completed years multiplied by female indicator |
+| `age_x_wealth` | Child age in completed years multiplied by wealth quintile |
+| `age_x_illness` | Child age in completed years multiplied by illness count |
+
+**Under-2-only engineered predictors:**
+
+| Notebook name | Label / construction |
+|---|---|
+| `dds_bin` | Dietary diversity grouped as 0-1, 2-3, or 4+ food groups |
+| `dds_ge2` | Indicator for dietary diversity score of at least 2 |
+| `dds_ge4` | Indicator for dietary diversity score of at least 4 |
+| `nongrain_groups` | Number of consumed food groups other than grains/roots/tubers (`dds - fg_grain`) |
+| `dds_x_age` | Dietary diversity score multiplied by child age in completed years |
+| `bf_bottle` | Combined breastfeeding-status and bottle-feeding category |
+| `anc_x_wealth` | ANC category multiplied by wealth quintile |
+| `bd9` | Times child ate solid/semi-solid food yesterday (7 = seven or more) |
+| `bd9_missing` | Indicator that the previous-day solid/semi-solid meal-frequency response is missing |
+
+### Additional post-hoc predictors in FS2
+
+| Notebook name | Label / construction | Cohort |
+|---|---|---|
+| `age_m` | Child age in months | All children, under 2 |
+| `age_lt6m` | Indicator that child is younger than 6 months | All children, under 2 |
+| `small_at_birth` | Reported small size at birth indicator | Under 2 only |
+| `early_bf` | Early initiation of breastfeeding indicator | Under 2 only |
+| `facility_delivery` | Delivery in a health facility indicator | Under 2 only |
+
+### Variables deliberately excluded from the predictor matrix
+
+The notebook includes explicit leakage and design-variable guards. These columns are not predictors:
+
+| Notebook name | Label / reason for exclusion |
+|---|---|
+| `whz2` | Weight-for-height z-score; used to verify the outcome and only as the training-fold target in the separate auxiliary-WHZ experiment |
+| `mod_wasting` | Moderate-wasting outcome derived from the same anthropometric measurement |
+| `any_wasting` | Any-wasting outcome derived from the same anthropometric measurement |
+| `wast_cat` | Wasting category derived from the same anthropometric measurement |
+| `hh1` | Cluster/PSU identifier; used only for grouped cross-validation |
+| `hh2` | Household number; identifier only |
+| `ln` | Child line number; identifier only |
+| `child_id` | Unique child ID; used for record matching, not prediction |
+| `mother_id` | Unique mother/caretaker ID; used to construct counts, not prediction |
+| `hh_id` | Unique household ID; used to construct household counts, not prediction |
+| `hh7a` | District identifier; excluded from predictors |
+| `strata` | Sampling stratum; design variable, not predictor |
+| `chweight` | Child sample weight; used for weighted fitting/evaluation, not predictor |
+
+### Models compared
+
+The same cohort-specific feature sets are evaluated with prevalence-only and logistic-regression baselines, tuned elastic-net logistic regression, Decision Tree, Random Forest, XGBoost, LightGBM and CatBoost (when the optional package is installed), plus a simple probability-averaging ensemble where enough tuned families are available. The notebook also includes a separate auxiliary-WHZ experiment. That experiment predicts continuous WHZ using training-fold rows only; it does not feed observed WHZ into a severe-wasting classifier.
+
+Preprocessing is fitted inside each training fold. Nominal variables are one-hot encoded; numeric, ordinal and binary variables are median-imputed and standardised. Infant-only variables are never imputed into older-child cohorts.
+
+**Current run note:** the saved run manifest indicates that XGBoost and LightGBM were available, while CatBoost was not installed and was skipped. Do not interpret CatBoost as having produced results in this run.
+
 ## Research question and data
 
 **Question:** Which child, maternal, and household characteristics are associated with severe wasting among children under five?
