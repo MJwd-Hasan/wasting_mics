@@ -47,7 +47,7 @@ Current files report weighted prevalence of **10.37% for moderate wasting** and 
 ### Calibration and prediction
 The calibration table is in-sample. In the highest-risk decile, predicted prevalence is 5.24% and observed prevalence is 5.96%. This does not show how the model will perform on new data.
 
-Held-out results are in `models.ipynb` (see `SHAP_results.md`). With PSU-grouped nested cross-validation, the full survey-weighted logistic regression has an out-of-fold weighted ROC-AUC of 0.580 (95% cluster-bootstrap CI 0.553-0.611), compared with the 0.635 in-sample AUC from the main notebook, so the in-sample value was optimistic. Tuned tree models (Random Forest 0.584, XGBoost 0.585, LightGBM 0.560) and age + sex alone (0.587) score about the same, and raw untuned trees score 0.50-0.54. Among children under 2 the tuned Random Forest is nominally best (0.595). Brier scores equal the no-skill baseline and complex models are over-confident (calibration slopes 0.3-0.8), so useful predictive performance has not been established.
+Held-out results are in `models_m.ipynb` (see `SHAP_results.md`). With PSU-grouped nested cross-validation, the full survey-weighted logistic regression has an out-of-fold weighted ROC-AUC of 0.580 (95% cluster-bootstrap CI 0.553-0.611), compared with the 0.635 in-sample AUC from the main notebook, so the in-sample value was optimistic. Tuned tree models (Random Forest 0.584, XGBoost 0.585, LightGBM 0.560) and age + sex alone (0.587) score about the same, and raw untuned trees score 0.50-0.54. Among children under 2 the tuned Random Forest is nominally best (0.595). Brier scores equal the no-skill baseline and complex models are over-confident (calibration slopes 0.3-0.8), so useful predictive performance has not been established.
 
 ## Infants and young children, ages 0-1
 
@@ -126,7 +126,7 @@ Child age and sex are the clearest provisional signals; the age association appe
 
 ## CatBoost model extension (code committed; results not yet computed)
 
-CatBoost has been added to `models.ipynb` in two places:
+CatBoost has been added to `models_m.ipynb` in two places:
 
 - **Raw-model comparison:** CatBoostClassifier now joins Decision Tree, Random Forest, XGBoost and LightGBM in the existing stratified PSU-grouped 5-fold evaluation. This means its predictions are evaluated on held-out PSUs, with ROC-AUC, PR-AUC, Brier score, top-decile capture and training AUC recorded alongside fit time.
 - **Nested hyperparameter search:** CatBoost is now a candidate in the fair comparison with logistic regression and the other tuned trees. Its randomized search varies iterations, tree depth, learning rate, L2 leaf regularization, random strength, bagging temperature, border count and class weighting. Search stays inside each outer training fold; outer test PSUs are not used to choose settings.
