@@ -37,7 +37,3 @@ bf_status,Breastfeeding status (children aged 0-1 only),3,60.18,0.03,100.0,"0.0:
 bottle,Fed with a bottle with nipple yesterday (children aged 0-1 only),2,60.17,0.02,100.0,
 anc_cat,ANC visits category (children aged 0-1 only),3,60.57,1.01,100.0,
 bd9,Times child ate solid/semi-solid food yesterday (7 = seven or more),7,70.74,26.55,100.0,
-age_m,,60,0.0,0.0,0.0,
-small_at_birth,,2,60.65,3.38,98.57,
-early_bf,,2,60.93,4.05,98.6,
-facility_delivery,,2,60.54,3.12,98.56,

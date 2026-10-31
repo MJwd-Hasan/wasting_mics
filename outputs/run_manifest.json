@@ -11,7 +11,7 @@
   "n_boot": 300,
   "n_perm": 30,
   "n_jobs": 4,
-  "have_revised": true,
+  "have_revised": false,
   "run_shap": true,
   "optional_packages": {
     "xgboost": true,
@@ -32,7 +32,7 @@
   "data_file": "MICS-child-ISRC.dta",
   "data_sha256": "e41d455c95de8c530ee768255aea349064134281621f7e02a7ec525f9df94b8a",
   "rows_used": 22311,
-  "runtime_minutes": 29.4,
+  "runtime_minutes": 4.1,
   "outputs": [
     "age_nonlinearity_test.csv",
     "age_spline_predictions.csv",
@@ -93,6 +93,7 @@
     "overfitting_gaps.csv",
     "permutation_check.csv",
     "pooled_metrics_by_seed.csv",
+    "run_manifest.json",
     "sample_and_prevalence.csv",
     "sample_flow.csv",
     "seed_comparison.csv",
