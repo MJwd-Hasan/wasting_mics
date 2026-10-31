@@ -22,7 +22,7 @@ The main input is `MICS-child-ISRC.dta`, a Stata dataset. The notebook:
 2. Checks that required columns are present.
 3. Checks that important variables use expected codes. For example, binary variables should contain only 0 and 1, and division should use the expected category codes.
 4. Checks missing values and identifies categories with very few children or severe-wasting cases.
-5. Removes records missing the outcome or essential survey-design information (`hh1`, `strata`, or `chweight)), and removes records with a non-positive child weight.
+5. Removes records missing the outcome or essential survey-design information (`hh1`, `strata`, or `chweight`), and removes records with a non-positive child weight.
 6. Confirms that the outcome is binary and agrees with the WHZ cut-off.
 
 In the saved run, this left **22,311 children and 552 severe-wasting cases**. The unweighted proportion of cases was 2.47%; after applying child survey weights, the estimated proportion was 2.52%.
