@@ -56,7 +56,7 @@ Feeding and antenatal-care variables exist only for children aged 0-1 (under 2),
 Current files report weighted prevalence of about 10.37% for moderate wasting and 12.88% for any wasting. Verify the outcome definitions and coding against the codebook.
 
 ### Prediction with tree-based models and SHAP
-Because the inferential and non-linear models did not clearly identify the important variables, a prediction-focused analysis was added in `models.ipynb`. Five tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM, CatBoost) were fitted with their default settings (no hyperparameter tuning). They were evaluated with stratified, PSU-grouped 5-fold cross-validation: every cluster stays entirely in one fold, so the test children come from neighbourhoods the model never saw. Scores reported are ROC AUC, PR AUC, Brier score and the share of cases found in the highest-risk 10% of children, plus ROC and precision-recall curves. Two analyses were run: all children (ages 0-4, 17 predictors) and children aged 0-1 (28 predictors, adding diet, breastfeeding and antenatal care). Missing values were left for the tree models to handle, and outcome-derived columns and identifiers were excluded.
+Because the inferential and non-linear models did not clearly identify the important variables, a prediction-focused analysis was added in `models_m.ipynb`. Five tree-based classifiers (Decision Tree, Random Forest, XGBoost, LightGBM, CatBoost) were fitted with their default settings (no hyperparameter tuning). They were evaluated with stratified, PSU-grouped 5-fold cross-validation: every cluster stays entirely in one fold, so the test children come from neighbourhoods the model never saw. Scores reported are ROC AUC, PR AUC, Brier score and the share of cases found in the highest-risk 10% of children, plus ROC and precision-recall curves. Two analyses were run: all children (ages 0-4, 17 predictors) and children aged 0-1 (28 predictors, adding diet, breastfeeding and antenatal care). Missing values were left for the tree models to handle, and outcome-derived columns and identifiers were excluded.
 
 SHAP (a method that splits each prediction into per-variable contributions) was then applied to the best model in each analysis. To avoid explaining the model on data it had memorised, SHAP values were computed out of fold: the model is refitted on each training fold and explained on held-out children.
 
@@ -70,34 +70,9 @@ The raw-model scores are not directly comparable with the in-sample AUC of 0.635
 Main results: for all children the weighted out-of-fold AUC is about 0.58-0.59 for the logistic models, tuned Random Forest and tuned XGBoost, with intervals about ±0.03 wide; none is significantly better than the survey-weighted logistic regression, and age + sex alone scores 0.587. Tuning raises the trees from 0.50-0.54 to 0.55-0.58 but they still do not beat logistic regression. Among children under 2 the tuned Random Forest is nominally best (0.595, +0.025 over weighted logistic, 95% CI 0.000 to 0.052) and age + sex is lower (0.548), so diet, antenatal care and household variables add a small amount of discrimination. Calibration is poor for the complex models (slopes 0.3-0.8; only age + sex is near 1), and Brier scores equal the no-skill baseline. The out-of-fold AUC of the full weighted logistic regression is 0.580, so the earlier in-sample 0.635 was optimistic by about 0.05. The SHAP analysis above used the raw untuned models; repeating it on the tuned models is a sensible next step.
 
 ### Interpretable neural-network check
-Two PyTorch Neural Additive Models (NAMs) were fitted in `nn.ipynb`, one for ages 0-4 using the same 17 predictors as Analysis A in `models.ipynb`, and one for ages 0-1 using the same 28 predictors as Analysis B. A NAM models the log-odds as an additive sum of one learned function per original variable, so nonlinear effects are possible while variable-level contributions remain directly inspectable. Numeric variables are median-imputed and standardized within each training fold; categorical variables use a dedicated missing/unseen category. The same stratified PSU-grouped 5-fold validation principle is used.
+Two PyTorch Neural Additive Models (NAMs) were fitted in `nn.ipynb`, one for ages 0-4 using the same 17 predictors as Analysis A in `models_m.ipynb`, and one for ages 0-1 using the same 28 predictors as Analysis B. A NAM models the log-odds as an additive sum of one learned function per original variable, so nonlinear effects are possible while variable-level contributions remain directly inspectable. Numeric variables are median-imputed and standardized within each training fold; categorical variables use a dedicated missing/unseen category. The same stratified PSU-grouped 5-fold validation principle is used.
 
 The weighted out-of-fold ROC AUC is 0.492 for all children and 0.522 for ages 0-1, with weighted PR AUC 0.025 and 0.037 respectively. These models do not improve on the existing logistic or tuned tree models. Their contribution rankings are therefore descriptive of unstable weak models and are not interpreted as effect estimates or evidence of causation. This reinforces the conclusion that the current cross-sectional variables contain limited information for individual severe-wasting prediction. Full interpretation is in `nn.md`.
-
-### Multicollinearity, PCA, and prediction from component scores (`multicollinearity_pca.ipynb`)
-
-The executed notebook added pairwise association diagnostics, VIF, PCA, and a prediction comparison using PCA components. The data loaded had 22,311 children and 552 severe-wasting cases in the all-child sample, and 8,888 children and 297 cases in the under-2 sample. Because many candidate names were not present in the loaded dataset, the notebook found only 7 core predictors for all children and 17 predictors for under-2; the current PCA results should be interpreted as results for those detected predictors, not the full planned list.
-
-The VIF calculation produced a poorly conditioned, rank-deficient design matrix. Very large VIFs for district indicators and the near-deterministic relationship between district (`hh7a`) and division indicate redundant geographic encoding. The exact VIF magnitudes are numerically unstable, so do not mechanically remove variables based on those values. Review category coding and consider representing geography at one level rather than simultaneously encoding district and division.
-
-After one-hot encoding and scaling, 18 principal components were needed to retain at least 80% of encoded predictor variance for all children (94 encoded columns), and 24 for children under 2 (114 encoded columns). The first component accounted for 22.2% and 18.1% of variance, respectively. PCA compresses correlated predictors but may reduce interpretability because each component combines several original features.
-
-The PCA prediction section re-used selected FS1 configurations from `outputs/tuning_results.csv` and fitted preprocessing/PCA within each PSU-grouped training fold. The reported numbers are **mean fold metrics**, not pooled out-of-fold scores:
-
-| Cohort | Model | Mean weighted ROC-AUC (SD) | Mean weighted PR-AUC | Mean Brier |
-|---|---|---:|---:|---:|
-| All children 0-4 | LightGBM | 0.548 (0.019) | 0.036 | 0.02455 |
-| All children 0-4 | XGBoost | 0.546 (0.022) | 0.032 | 0.02454 |
-| All children 0-4 | Random Forest | 0.525 (0.029) | 0.030 | 0.02455 |
-| All children 0-4 | Elastic Net | 0.519 (0.026) | 0.031 | 0.02454 |
-| Children 0-1 | Elastic Net | 0.561 (0.047) | 0.048 | 0.03210 |
-| Children 0-1 | XGBoost | 0.560 (0.046) | 0.043 | 0.03206 |
-| Children 0-1 | LightGBM | 0.560 (0.046) | 0.045 | 0.03207 |
-| Children 0-1 | Random Forest | 0.540 (0.037) | 0.039 | 0.03208 |
-
-These mean AUCs indicate weak discrimination. The top all-child PCA model is LightGBM (0.548), while under-2 Elastic Net is nominally highest (0.561), only narrowly ahead of XGBoost and LightGBM; the fold standard deviations are much larger than these small differences. CatBoost was not available among the selected PCA configurations, so it is not included in this table. These PCA scores should not be directly ranked against the nested-CV scores in `models_m.ipynb`, because the validation summary and metric aggregation differ.
-
-SHAP was calculated on PCA components. For all children, PC7 and PC5/PC8 are prominent for tree models; their high-loading encoded variables include age-related categories and geography/household categories. For under-2 models, components related to food variety/food groups, ANC category and geography/household factors appear among important components. This is a component-space explanation only: it does not establish direct original-variable effects or causality.
 
 ## 6. What the results suggest
 
