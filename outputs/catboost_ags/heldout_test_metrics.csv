@@ -1,0 +1,2 @@
+n_test,severe_wasting_cases,roc_auc,pr_auc_average_precision,accuracy,precision,recall,f1
+4294,106,0.606181633057613,0.0431580339313938,0.975314392175128,0.0,0.0,0.0
